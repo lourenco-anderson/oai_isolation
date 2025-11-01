@@ -1,0 +1,9 @@
+#!/bin/bash
+
+OAI_BUILD_DIR="ext/openair/cmake_targets/ran_build/build"
+
+for lib in ${OAI_BUILD_DIR}/*.a; do
+    if nm $lib | grep -q $1; then
+        echo "FOUND in $lib"
+    fi
+done

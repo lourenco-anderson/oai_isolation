@@ -1,0 +1,5 @@
+for lib in ${OAI_BUILD_DIR}/*.a; do
+    if nm $lib | grep -q $; then
+        echo "FOUND in $lib"
+    fi
+done
