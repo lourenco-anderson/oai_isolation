@@ -7,3 +7,9 @@ for lib in ${OAI_BUILD_DIR}/*.a; do
         echo "FOUND in $lib"
     fi
 done
+
+for lib in ${OAI_BUILD_DIR}/lib*.so*; do
+    if nm -D $lib | grep -q $1; then
+        echo "FOUND in $lib"
+    fi
+done

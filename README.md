@@ -4,7 +4,7 @@
 
 Clone this repo. Run `git submodule init` then follow the steps [here](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/NR_SA_Tutorial_OAI_nrUE.md).
 
-or just run
+or just run inside `ext/openair/cmake_targets` (after `git submodule init`)
 
 ```bash
 ./build_oai -I

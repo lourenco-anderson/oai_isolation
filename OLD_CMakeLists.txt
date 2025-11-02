@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.17)
+project(OAI_ISOLATION C)
+
+# Gather all C sources in your src/ folder
+file(GLOB_RECURSE SOURCES "src/*.c")
+
+# Path to OAI build output (adjust if needed)
+set(OAI_BUILD_DIR "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build")
+
+# Static libraries
+file(GLOB OPENAIR_STATIC_LIBS "ext/openair/cmake_targets/ran_build/build/*.a")
+message("[INFO] static libs:\n${OPENAIR_STATIC_LIBS}")
+
+# Shared libraries
+file(GLOB OPENAIR_SHARED_LIBS "ext/openair/cmake_targets/ran_build/build/*.so")
+message("[INFO] shared libs:\n${OPENAIR_SHARED_LIBS}")
+
+# Create the executable
+add_executable(oai_isolation ${SOURCES} )
+
+# "ext/openair/executables/lte-softmodem.c"
+# Include directories (headers)
+target_include_directories(oai_isolation PUBLIC 
+    "${CMAKE_SOURCE_DIR}/ext/openair"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/NR_TRANSPORT"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/TOOLS"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils"
+    "${CMAKE_SOURCE_DIR}/ext/openair/executables"
+    "${CMAKE_SOURCE_DIR}/ext/openair/radio/COMMON/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/nfapi/open-nFAPI/nfapi/public_inc/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/UTIL/OMV/"
+    "ext/openair/cmake_targets/ran_build/build/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/LAYER2/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build/openair2/RRC/LTE/MESSAGES/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/hashtable/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/ocp_itti/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/RRC/LTE/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build/openair2/RRC/NR/MESSAGES/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/UTIL/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/IES/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/COMMON/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/EMM/MSG/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/ESM/MSG/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/API/NETWORK/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/COMMON/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/UE/ESM/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/UE/EMM/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair3/NAS/UE/API/USER/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/barrier/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/actor/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/threadPool/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/NR_UE_PHY_INTERFACE/"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/ENB_APP/"
+)
+
+# Definitions (adapt if your function requires other constants)
+target_compile_definitions(oai_isolation PRIVATE
+    NB_ANTENNAS_TX=4
+    NB_ANTENNAS_RX=4
+    MAX_NUM_CCs=2
+)
+
+# Add OAI build directory so dynamic libs (-lxxx) are found
+# target_link_directories(oai_isolation PRIVATE
+#     ${OAI_BUILD_DIR}
+# )
+
+# Link both static and shared libraries
+target_link_libraries(oai_isolation PUBLIC
+    ${OPENAIR_STATIC_LIBS}
+    ${OPENAIR_SHARED_LIBS}
+)
+
+
+# --- Runtime path setup for shared libs ---
+# This ensures the executable finds the .so at runtime
+set_target_properties(oai_isolation PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN/ext/openair/cmake_targets/ran_build/build"
+    # "$ORIGIN" means "relative to the executable location"
+)
+
+# Optional: Add the library folder to the linker search path
+link_directories("ext/openair/cmake_targets/ran_build/build")
