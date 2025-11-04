@@ -2,6 +2,6 @@
 
 int main(void)
 {
-    nr_crc();
+    nr_scramble();
     return 0;
 }
