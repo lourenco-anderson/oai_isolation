@@ -9,6 +9,7 @@
 #include "PHY/MODULATION/modulation_common.h"
 #include "softmodem-common.h"
 #include "PHY/impl_defs_top.h"
+#include "nr_dlsch_onelayer.h"
 
 #define POLY 0x1864CFB
 #define INIT 0xB704CE
@@ -19,3 +20,7 @@
 void nr_scramble();
 void nr_crc();
 void nr_ofdm_modulation();
+void nr_layermapping();
+void nr_ldpc();
+void nr_precoding();
+void nr_modulation_test();

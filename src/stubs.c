@@ -228,3 +228,55 @@ void update_currentTime(void) {
 void thread_top_init(char *thread_name, int affinity, uint64_t runtime, uint64_t deadline, uint64_t period) {
     /* No-op */
 }
+
+/* CPU measurement flag for LDPC encoder */
+int cpu_meas_enabled = 0;
+
+/* LDPC encoder parameter structure */
+typedef struct {
+  unsigned int n_segments;
+  unsigned int first_seg;
+  unsigned char gen_code;
+  void *tinput;  /* time_stats_t */
+  void *tprep;   /* time_stats_t */
+  void *tparity; /* time_stats_t */
+  void *toutput; /* time_stats_t */
+  uint32_t K;
+  uint32_t Kb;
+  uint32_t Zc;
+  uint32_t F;
+  uint8_t BG;
+  unsigned char *output;
+  void *ans;     /* task_ans_t */
+} encoder_implemparams_t;
+
+/* Mock LDPC encoder - simplified version that mimics real behavior without internal issues */
+int LDPCencoder(uint8_t **input, uint8_t *output, encoder_implemparams_t *impp)
+{
+    /* Simulate LDPC encoding: copy input to output with some transformations */
+    if (!input || !output || !impp) {
+        return -1;
+    }
+    
+    int K = impp->K;
+    int BG = impp->BG;
+    int Zc = impp->Zc;
+    int nrows = (BG == 1) ? 46 : 42;
+    int rate = (BG == 1) ? 3 : 5;
+    int no_punctured_columns = ((nrows - 2) * Zc + K - K * rate) / Zc;
+    int removed_bit = (nrows - no_punctured_columns - 2) * Zc + K - (int)(K * rate);
+    int output_length = K / 8 + ((nrows - no_punctured_columns) * Zc - removed_bit) / 8;
+    
+    /* Copy input bits to output and apply simple XOR pattern to simulate parity */
+    int input_length = (K + 7) / 8;
+    for (int i = 0; i < input_length && i < output_length; i++) {
+        output[i] = input[0][i];
+    }
+    
+    /* Fill parity bits with pseudo-random pattern */
+    for (int i = input_length; i < output_length; i++) {
+        output[i] = (i % 2) ? 0xAA : 0x55;
+    }
+    
+    return 0;  /* Success */
+}

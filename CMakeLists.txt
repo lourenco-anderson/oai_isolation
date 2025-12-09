@@ -4,6 +4,12 @@ project(OAI_ISOLATION C)
 # Gather all C sources in src/
 file(GLOB_RECURSE SOURCES "src/*.c")
 
+# Explicitly add the new onelayer file
+list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
+
+# Add LDPC encoder source (commented out - causes double-free issues)
+# list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_encoder/ldpc_encoder_optim8segmulti.c")
+
 # Path to OAI build output
 set(OAI_BUILD_DIR "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build")
 

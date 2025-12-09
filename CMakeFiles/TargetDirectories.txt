@@ -1,3 +1,0 @@
-/home/anderson/dev/crc_isolation/CMakeFiles/oai_isolation.dir
-/home/anderson/dev/crc_isolation/CMakeFiles/edit_cache.dir
-/home/anderson/dev/crc_isolation/CMakeFiles/rebuild_cache.dir
