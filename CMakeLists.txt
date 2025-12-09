@@ -7,7 +7,8 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 # Explicitly add the new onelayer file
 list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
 
-# Add LDPC encoder source (commented out - causes double-free issues)
+# NOTE: LDPC encoder real compilation is disabled due to memory corruption issues
+# with OAI library linkage. Use mock implementation in stubs.c instead.
 # list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_encoder/ldpc_encoder_optim8segmulti.c")
 
 # Path to OAI build output
@@ -25,6 +26,8 @@ target_include_directories(oai_isolation PUBLIC
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/NR_TRANSPORT"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/TOOLS"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/CODING"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/CODING/nrLDPC_encoder"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/CODING/nrLDPC_decoder"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair2/"
     "${CMAKE_SOURCE_DIR}/ext/openair/common"
     "${CMAKE_SOURCE_DIR}/ext/openair/common/utils"
@@ -47,16 +50,16 @@ target_compile_options(oai_isolation PRIVATE -mavx)
 # Add OAI build directory so static libs are found
 target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
 
-# ------------------ FIXED LIBRARIES ------------------
+# Restored OAI libraries for layer mapping and other functions
 target_link_libraries(oai_isolation PRIVATE
-    PHY_NR_COMMON     # replaces libPHY_NR_COMMON.a
-    PHY_COMMON         # replaces libPHY_COMMON.a
-    CONFIG_LIB             # replaces libCONFIG_LIB.a
-    PHY_NR             # replaces libPHY_NR.a
-    PHY               # replaces libPHY.a
-    UTIL           # replaces libUTIL.a
-    SCHED_LIB              # replaces libSCHED_LIB.a
-    SCHED_NR_LIB           # replaces libSCHED_NR_LIB.a
+    PHY_NR_COMMON     
+    PHY_COMMON         
+    CONFIG_LIB             
+    PHY_NR             
+    PHY               
+    UTIL           
+    SCHED_LIB              
+    SCHED_NR_LIB           
 
     # Dynamic libs
     nrscope
