@@ -2,6 +2,6 @@
 
 int main(void)
 {
-    nr_scramble();
+    nr_ofdm_modulation();
     return 0;
 }

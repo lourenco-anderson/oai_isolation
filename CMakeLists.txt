@@ -1,22 +1,25 @@
 cmake_minimum_required(VERSION 3.17)
 project(OAI_ISOLATION C)
 
-# Gather all C sources in your src/ folder
+# Gather all C sources in src/
 file(GLOB_RECURSE SOURCES "src/*.c")
 
-# Path to OAI build output (adjust if needed)
+# Path to OAI build output
 set(OAI_BUILD_DIR "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build")
 
-# Create the executable (include stubs.c)
+# Create the executable
 add_executable(oai_isolation ${SOURCES} src/stubs.c)
 
-# Include directories (headers)
+# Include directories
 target_include_directories(oai_isolation PUBLIC 
+    "${CMAKE_SOURCE_DIR}/ext/openair/executables"
     "${CMAKE_SOURCE_DIR}/ext/openair"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/NR_TRANSPORT"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/TOOLS"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair1/PHY/CODING"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/"
     "${CMAKE_SOURCE_DIR}/ext/openair/common"
     "${CMAKE_SOURCE_DIR}/ext/openair/common/utils"
     "${CMAKE_SOURCE_DIR}/ext/openair/executables"
@@ -25,38 +28,40 @@ target_include_directories(oai_isolation PUBLIC
     "${CMAKE_SOURCE_DIR}/ext/openair/openair2/UTIL/OMV/"
 )
 
-# Definitions (adapt if your function requires other constants)
+# Compile definitions
 target_compile_definitions(oai_isolation PRIVATE
     NB_ANTENNAS_TX=4
     NB_ANTENNAS_RX=4
     MAX_NUM_CCs=2
 )
 
-# Add OAI build directory so dynamic libs (-lxxx) are found
-target_link_directories(oai_isolation PRIVATE
-    ${OAI_BUILD_DIR}
-)
+# Enable AVX instructions to fix sse_intrin.h warnings
+target_compile_options(oai_isolation PRIVATE -mavx)
 
-# ---- LINK ALL REQUIRED STATIC AND DYNAMIC LIBRARIES ----
+# Add OAI build directory so static libs are found
+target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
+
+# ------------------ FIXED LIBRARIES ------------------
 target_link_libraries(oai_isolation PRIVATE
-    # --- Core OAI static libs ---
-    ${OAI_BUILD_DIR}/libPHY_NR_COMMON.a
-    ${OAI_BUILD_DIR}/libPHY_COMMON.a
-    ${OAI_BUILD_DIR}/libPHY_NR.a
-    ${OAI_BUILD_DIR}/libUTIL.a
-    ${OAI_BUILD_DIR}/libSCHED_LIB.a
-    ${OAI_BUILD_DIR}/libSCHED_NR_LIB.a
-    
-    # --- Dynamic libs built by OAI (shared .so) ---
-    -lnrscope
-    -loai_device
-    -loai_usrpdevif
-    -lparams_libconfig
-    -lparams_yaml
-    -lrf_emulator
-    -lrfsimulator
-    -lvrtsim
-    
-    # --- System libs ---
+    PHY_NR_COMMON     # replaces libPHY_NR_COMMON.a
+    PHY_COMMON         # replaces libPHY_COMMON.a
+    CONFIG_LIB             # replaces libCONFIG_LIB.a
+    PHY_NR             # replaces libPHY_NR.a
+    PHY               # replaces libPHY.a
+    UTIL           # replaces libUTIL.a
+    SCHED_LIB              # replaces libSCHED_LIB.a
+    SCHED_NR_LIB           # replaces libSCHED_NR_LIB.a
+
+    # Dynamic libs
+    nrscope
+    oai_device
+    oai_usrpdevif
+    params_libconfig    
+    params_yaml
+    rf_emulator
+    rfsimulator
+    vrtsim
+
+    # System libs
     m pthread rt dl
 )

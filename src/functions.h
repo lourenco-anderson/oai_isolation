@@ -4,12 +4,18 @@
 #include <stdint.h>
 #include <string.h>
 #include "PHY/NR_TRANSPORT/nr_transport_common_proto.h"
+#include "common/utils/LOG/log.h"
+#include "PHY/MODULATION/nr_modulation.h"
+#include "PHY/MODULATION/modulation_common.h"
+#include "softmodem-common.h"
+#include "PHY/impl_defs_top.h"
 
 #define POLY 0x1864CFB
 #define INIT 0xB704CE
 #define N 24072
 
-#include "PHY/CODING/coding_defs.h"
+// #include "PHY/CODING/coding_defs.h"
 
 void nr_scramble();
 void nr_crc();
+void nr_ofdm_modulation();

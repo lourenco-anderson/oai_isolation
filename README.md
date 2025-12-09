@@ -2,7 +2,7 @@
 
 ## Getting started
 
-Clone this repo. Run `git submodule init` then follow the steps [here](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/NR_SA_Tutorial_OAI_nrUE.md).
+Clone this repo. Run `git submodule init` and `git submodule update` then follow the steps [here](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/develop/doc/NR_SA_Tutorial_OAI_nrUE.md).
 
 or just run inside `ext/openair/cmake_targets` (after `git submodule init`)
 
