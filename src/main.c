@@ -13,6 +13,7 @@ int main(void)
     // nr_ofdm_demo();
     // nr_ch_estimation();
     // nr_descrambling();
-    nr_layer_demapping_test();
+    // nr_layer_demapping_test();
+    nr_crc_check();
     return 0;
 }

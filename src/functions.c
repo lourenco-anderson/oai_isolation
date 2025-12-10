@@ -1011,6 +1011,133 @@ void nr_layer_demapping_test()
     printf("=== NR Layer Demapping tests completed ===\n");
 }
 
+void nr_crc_check()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR CRC Check tests ===\n");
+    
+    /* Initialize CRC tables (required before using check_crc) */
+    crcTableInit();
+    
+    /* CRC check parameters */
+    const uint32_t payload_bits = 2688;     /* Payload length in bits (without CRC) */
+    const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
+    const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
+    const int num_iterations = 1000;        /* 1000 iterations */
+    
+    /* Buffer size in bytes */
+    const uint32_t total_bytes = (total_bits + 7) / 8;
+    
+    printf("CRC check parameters: payload=%u bits, crc=24 bits (CRC24_A)\n", payload_bits);
+    printf("Total: %u bits = %u bytes\n", total_bits, total_bytes);
+    printf("Running %d iterations...\n", num_iterations);
+    
+    /* Allocate data buffer with CRC space (aligned) */
+    uint8_t *data = aligned_alloc(32, total_bytes);
+    if (!data) {
+        printf("nr_crc_check: data buffer allocation failed\n");
+        return;
+    }
+    memset(data, 0, total_bytes);
+    
+    /* Seed data with sample pattern */
+    const uint8_t sample[] = {
+        0x69, 0xBE, 0xF6, 0x02, 0xAD, 0xFB, 0x50, 0xE6,
+        0xFF, 0x35, 0xA8, 0x44, 0xF9, 0x21, 0x92, 0xAA,
+        0x68, 0x28, 0x2A
+    };
+    int sample_size = sizeof(sample) < total_bytes ? sizeof(sample) : total_bytes;
+    memcpy(data, sample, sample_size);
+    
+    /* Statistics counters */
+    int crc_valid_count = 0;
+    int crc_invalid_count = 0;
+    
+    printf("Starting CRC check loop...\n");
+    printf("Iterations 0-99:   Valid CRC (freshly computed)\n");
+    printf("Iterations 100-199: Invalid CRC (corrupted data)\n");
+    printf("Iterations 200-999: Valid CRC (regenerated)\n\n");
+    
+    /* Main CRC check loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary first byte so each run differs */
+        data[0] = (uint8_t)iter;
+        
+        if (iter < 100) {
+            /* Compute CRC24_A over the payload bits only */
+            uint32_t crc_val = crc24a(data, payload_bits);
+            
+            /* Store CRC24 in the last 24 bits (3 bytes) of buffer
+             * check_crc() expects CRC in bits 8-31 of the crc24a() result
+             * So we shift right by 8 before storing */
+            uint32_t payload_bytes = (payload_bits + 7) / 8;
+            uint32_t crc_shifted = crc_val >> 8;  /* Get bits 8-31 */
+            data[payload_bytes] = (uint8_t)((crc_shifted >> 16) & 0xFF);
+            data[payload_bytes + 1] = (uint8_t)((crc_shifted >> 8) & 0xFF);
+            data[payload_bytes + 2] = (uint8_t)(crc_shifted & 0xFF);
+            
+        } else if (iter < 200) {
+            /* For corrupted case: compute valid CRC first, then corrupt it */
+            uint32_t crc_val = crc24a(data, payload_bits);
+            uint32_t payload_bytes = (payload_bits + 7) / 8;
+            uint32_t crc_shifted = crc_val >> 8;  /* Get bits 8-31 */
+            data[payload_bytes] = (uint8_t)((crc_shifted >> 16) & 0xFF);
+            data[payload_bytes + 1] = (uint8_t)((crc_shifted >> 8) & 0xFF);
+            data[payload_bytes + 2] = (uint8_t)(crc_shifted & 0xFF);
+            
+            /* Corrupt the last bit of payload to make CRC invalid */
+            data[payload_bytes - 1] ^= 0x01;
+            
+        } else {
+            /* Regenerate valid CRC */
+            uint32_t crc_val = crc24a(data, payload_bits);
+            uint32_t payload_bytes = (payload_bits + 7) / 8;
+            uint32_t crc_shifted = crc_val >> 8;  /* Get bits 8-31 */
+            data[payload_bytes] = (uint8_t)((crc_shifted >> 16) & 0xFF);
+            data[payload_bytes + 1] = (uint8_t)((crc_shifted >> 8) & 0xFF);
+            data[payload_bytes + 2] = (uint8_t)(crc_shifted & 0xFF);
+        }
+        
+        /* Call check_crc to verify CRC
+         * Returns 1 if CRC is valid, 0 if invalid
+         * Parameter n is TOTAL bits (payload + CRC) */
+        int is_valid = check_crc(data, total_bits, crc_type);
+        
+        if (is_valid) {
+            crc_valid_count++;
+        } else {
+            crc_invalid_count++;
+        }
+        
+        if ((iter % 100) == 0 || (iter >= 99 && iter <= 101) || (iter >= 199 && iter <= 201)) {
+            printf("  iter %3d: CRC %s (valid=%d, invalid=%d)\n",
+                   iter, is_valid ? "OK  " : "FAIL", crc_valid_count, crc_invalid_count);
+        }
+    }
+    
+    printf("\n=== CRC Check Statistics ===\n");
+    printf("Total iterations: %d\n", num_iterations);
+    printf("Valid CRC count: %d (expected ~800: iters 0-99 + 200-999)\n", crc_valid_count);
+    printf("Invalid CRC count: %d (expected ~200: iters 100-199)\n", crc_invalid_count);
+    printf("Valid rate: %.1f%%\n", (100.0 * crc_valid_count) / num_iterations);
+    
+    printf("\n=== Final data buffer (first 16 bytes + CRC) ===\n");
+    uint32_t payload_bytes = (payload_bits + 7) / 8;
+    for (int i = 0; i < 16 && i < (int)payload_bytes; i++) {
+        printf("data[%02d] = 0x%02X\n", i, data[i]);
+    }
+    printf("...\n");
+    printf("data[%u] = 0x%02X (CRC byte 0)\n", payload_bytes, data[payload_bytes]);
+    printf("data[%u] = 0x%02X (CRC byte 1)\n", payload_bytes + 1, data[payload_bytes + 1]);
+    printf("data[%u] = 0x%02X (CRC byte 2)\n", payload_bytes + 2, data[payload_bytes + 2]);
+    
+    /* Cleanup */
+    free(data);
+    printf("=== NR CRC Check tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */
