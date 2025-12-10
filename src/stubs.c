@@ -360,6 +360,55 @@ void nr_dlsch_unscrambling(int16_t *llr, uint32_t size, uint8_t q, uint32_t Nid,
 }
 
 /* ============================================================
+ * DLSCH LAYER DEMAPPING - nr_dlsch_layer_demapping
+ * ============================================================
+ * Stub for layer demapping - converts spatial layers to codewords.
+ * Real implementation is in openair1/PHY/NR_UE_TRANSPORT/nr_dlsch_demodulation.c
+ */
+void nr_dlsch_layer_demapping(int16_t *llr_cw[2],
+                              uint8_t Nl,
+                              uint8_t mod_order,
+                              uint32_t length,
+                              int32_t codeword_TB0,
+                              int32_t codeword_TB1,
+                              uint32_t sz,
+                              int16_t llr_layers[][sz])
+{
+    /* Implement layer demapping based on number of layers */
+    switch (Nl) {
+        case 1:
+            /* Single layer: direct copy to active codeword */
+            if (codeword_TB1 == -1)
+                memcpy(llr_cw[0], llr_layers[0], length * sizeof(int16_t));
+            else if (codeword_TB0 == -1)
+                memcpy(llr_cw[1], llr_layers[0], length * sizeof(int16_t));
+            break;
+            
+        case 2:
+        case 3:
+        case 4:
+            /* Multiple layers: interleave layers into codeword(s) */
+            for (uint32_t i = 0; i < (length / Nl / mod_order); i++) {
+                for (uint8_t l = 0; l < Nl; l++) {
+                    for (uint8_t m = 0; m < mod_order; m++) {
+                        if (codeword_TB1 == -1)
+                            llr_cw[0][Nl * mod_order * i + l * mod_order + m] = 
+                                llr_layers[l][i * mod_order + m];
+                        else if (codeword_TB0 == -1)
+                            llr_cw[1][Nl * mod_order * i + l * mod_order + m] = 
+                                llr_layers[l][i * mod_order + m];
+                    }
+                }
+            }
+            break;
+            
+        default:
+            printf("nr_dlsch_layer_demapping: Not supported number of layers %d\n", Nl);
+            break;
+    }
+}
+
+/* ============================================================
  * OFDM SLOT FEP - nr_slot_fep
  * ============================================================
  * Implementation for OFDM slot front-end processing (DFT).

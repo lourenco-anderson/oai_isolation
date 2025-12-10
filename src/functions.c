@@ -921,6 +921,96 @@ void nr_descrambling()
     printf("=== NR DLSCH Descrambling tests completed ===\n");
 }
 
+void nr_layer_demapping_test()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR Layer Demapping tests ===\n");
+    
+    /* Layer demapping parameters */
+    const uint8_t Nl = 2;                   /* 2 layers */
+    const uint8_t mod_order = 4;            /* 16-QAM (4 bits per symbol) */
+    const uint32_t length = 2048;           /* Total LLRs to process */
+    const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
+    const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
+    const int num_iterations = 100;
+    
+    /* Calculate layer buffer size */
+    const uint32_t layer_sz = length;       /* Each layer holds all LLRs */
+    
+    printf("Layer demapping parameters: Nl=%u, mod_order=%u, length=%u\n",
+           Nl, mod_order, length);
+    printf("Codewords: TB0=%d, TB1=%d\n", codeword_TB0, codeword_TB1);
+    printf("Running %d iterations...\n", num_iterations);
+    
+    /* Allocate layer LLR buffers (input to demapping) */
+    int16_t (*llr_layers)[layer_sz] = aligned_alloc(32, Nl * layer_sz * sizeof(int16_t));
+    if (!llr_layers) {
+        printf("nr_layer_demapping_test: llr_layers allocation failed\n");
+        return;
+    }
+    memset(llr_layers, 0, Nl * layer_sz * sizeof(int16_t));
+    
+    /* Allocate codeword LLR buffers (output from demapping) */
+    int16_t *llr_cw[2];
+    llr_cw[0] = aligned_alloc(32, length * sizeof(int16_t));
+    llr_cw[1] = aligned_alloc(32, length * sizeof(int16_t));
+    
+    if (!llr_cw[0] || !llr_cw[1]) {
+        printf("nr_layer_demapping_test: llr_cw allocation failed\n");
+        free(llr_layers);
+        return;
+    }
+    memset(llr_cw[0], 0, length * sizeof(int16_t));
+    memset(llr_cw[1], 0, length * sizeof(int16_t));
+    
+    /* Seed layer LLRs with sample pattern */
+    const int16_t sample_llr[] = {
+        127, -120, 115, -110, 105, -100, 95, -90,
+        85, -80, 75, -70, 65, -60, 55, -50
+    };
+    int sample_size = sizeof(sample_llr) / sizeof(sample_llr[0]);
+    
+    for (int layer = 0; layer < Nl; layer++) {
+        for (int i = 0; i < sample_size && i < (int)layer_sz; i++) {
+            llr_layers[layer][i] = sample_llr[i] + (layer * 10);  /* Offset per layer */
+        }
+    }
+    
+    printf("Starting layer demapping loop...\n");
+    
+    /* Main layer demapping loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary first LLR so each run differs */
+        llr_layers[0][0] = (int16_t)((iter * 5) & 0xFF);
+        if (Nl > 1) {
+            llr_layers[1][0] = (int16_t)((iter * 7) & 0xFF);
+        }
+        
+        /* Call nr_dlsch_layer_demapping to perform layer demapping */
+        nr_dlsch_layer_demapping(llr_cw, Nl, mod_order, length, 
+                                codeword_TB0, codeword_TB1, 
+                                layer_sz, llr_layers);
+        
+        if ((iter % 20) == 0) {
+            printf("  iter %3d: cw0[0]=%d cw0[1]=%d cw0[2]=%d\n",
+                   iter, llr_cw[0][0], llr_cw[0][1], llr_cw[0][2]);
+        }
+    }
+    
+    printf("\n=== Final layer demapped output (first 16 LLRs of codeword 0) ===\n");
+    for (int i = 0; i < 16 && i < (int)length; i++) {
+        printf("llr_cw[0][%02d] = %d\n", i, llr_cw[0][i]);
+    }
+    
+    /* Cleanup */
+    free(llr_layers);
+    free(llr_cw[0]);
+    free(llr_cw[1]);
+    printf("=== NR Layer Demapping tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */

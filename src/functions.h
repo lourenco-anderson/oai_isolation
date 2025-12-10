@@ -33,6 +33,7 @@ void nr_modulation_test();
 void nr_ofdm_demo();
 void nr_ch_estimation();
 void nr_descrambling();
+void nr_layer_demapping_test();
 
 /* OAI real function declarations - using simple signatures to avoid header dependencies */
 int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,
