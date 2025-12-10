@@ -851,6 +851,76 @@ void nr_ch_estimation()
     printf("=== NR Channel Estimation (PDSCH) tests completed ===\n");
 }
 
+void nr_descrambling()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    /* Initialize SIMD byte2m128i lookup table for unscrambling */
+    init_byte2m128i();
+    
+    printf("=== Starting NR DLSCH Descrambling tests ===\n");
+    
+    /* Descrambling parameters */
+    const uint32_t size = 2688;        /* bits (LLR size) */
+    const uint8_t q = 0;
+    const uint32_t Nid = 0;
+    const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
+    
+    /* Buffer size: allocate extra space for SIMD operations safety margin */
+    const int buffer_size = 4096;      /* Large safe buffer for SIMD */
+    const int num_iterations = 100;    /* Reduced iterations for descrambling */
+    
+    printf("Descrambling parameters: size=%u bits, q=%u, Nid=%u, n_RNTI=0x%X\n",
+           size, q, Nid, n_RNTI);
+    printf("Buffer size: %d LLRs (allocated for %u LLRs needed)\n", buffer_size, size);
+    
+    /* Allocate LLR buffer (aligned to 32 bytes for SIMD) - int16_t for soft bits */
+    int16_t *llr = aligned_alloc(32, buffer_size * sizeof(int16_t));
+    if (!llr) {
+        printf("nr_descrambling: llr allocation failed\n");
+        return;
+    }
+    memset(llr, 0, buffer_size * sizeof(int16_t));
+    
+    /* Optional: seed the LLR input with a sample pattern (soft values) */
+    const int16_t sample_llr[] = {
+        127, -120, 115, -110, 105, -100, 95, -90,
+        85, -80, 75, -70, 65, -60, 55, -50,
+        45, -40, 35
+    };
+    
+    int sample_size = sizeof(sample_llr) / sizeof(sample_llr[0]);
+    for (int i = 0; i < sample_size && i < (int)size; i++) {
+        llr[i] = sample_llr[i];
+    }
+    
+    printf("Running %d iterations of DLSCH descrambling...\n", num_iterations);
+    
+    /* Main descrambling loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary first LLR so each run differs */
+        llr[0] = (int16_t)((iter * 7) & 0xFF);
+        
+        /* Call nr_dlsch_unscrambling to descramble the LLRs */
+        nr_dlsch_unscrambling(llr, size, q, Nid, n_RNTI);
+        
+        if ((iter % 20) == 0) {
+            printf("  iter %3d: llr[0]=%d llr[1]=%d llr[2]=%d\n",
+                   iter, llr[0], llr[1], llr[2]);
+        }
+    }
+    
+    printf("\n=== Final descrambled LLR output (first 16 values) ===\n");
+    for (int i = 0; i < 16 && i < (int)size; i++) {
+        printf("llr[%02d] = %d\n", i, llr[i]);
+    }
+    
+    /* Cleanup */
+    free(llr);
+    printf("=== NR DLSCH Descrambling tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */

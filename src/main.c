@@ -11,6 +11,7 @@ int main(void)
     // nr_layermapping();
     // nr_ldpc();
     // nr_ofdm_demo();
-    nr_ch_estimation();
+    // nr_ch_estimation();
+    nr_descrambling();
     return 0;
 }

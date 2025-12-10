@@ -11,6 +11,9 @@
 #include "PHY/impl_defs_top.h"
 #include "nr_dlsch_onelayer.h"
 
+/* SIMD initialization needed for unscrambling */
+extern void init_byte2m128i(void);
+
 #define POLY 0x1864CFB
 #define INIT 0xB704CE
 #define N 24072
@@ -29,6 +32,7 @@ void nr_precoding();
 void nr_modulation_test();
 void nr_ofdm_demo();
 void nr_ch_estimation();
+void nr_descrambling();
 
 /* OAI real function declarations - using simple signatures to avoid header dependencies */
 int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,

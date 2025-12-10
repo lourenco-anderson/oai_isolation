@@ -5,6 +5,7 @@
 #include <immintrin.h>
 #include <stdarg.h>
 #include <pthread.h>
+#include <simde/x86/sse2.h>
 
 /* ============================================================
  * LOGGING SYSTEM STUBS - Match OAI's actual log structures
@@ -178,10 +179,22 @@ void exit_function(const char *file, const char *function, const int line, const
     exit(EXIT_FAILURE);
 }
 
-/* Stub for byte2m128i - converts bytes to 128-bit SIMD vector */
-__m128i byte2m128i(uint8_t *x) {
-    /* Load 16 bytes into a 128-bit register */
-    return _mm_loadu_si128((__m128i *)x);
+/* SIMD byte2m128i lookup table - used by unscrambling for SIMD bit operations
+ * This replaces the old byte2m128i() function stub with the real lookup table */
+simde__m128i byte2m128i[256];
+
+void init_byte2m128i(void)
+{
+    for (int s = 0; s < 256; s++) {
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * (s & 1)), 0);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 1) & 1)), 1);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 2) & 1)), 2);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 3) & 1)), 3);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 4) & 1)), 4);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 5) & 1)), 5);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 6) & 1)), 6);
+        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 7) & 1)), 7);
+    }
 }
 
 /* Stub for get_softmodem_params - returns softmodem parameters */
@@ -332,6 +345,18 @@ int LDPCencoder(uint8_t **input, uint8_t *output, encoder_implemparams_t *impp)
     }
     
     return 0;  /* Success */
+}
+
+/* ============================================================
+ * DLSCH UNSCRAMBLING - nr_dlsch_unscrambling
+ * ============================================================
+ * Wrapper for nr_codeword_unscrambling (descrambling operation).
+ * This function is used in DLSCH decoding to descramble received LLRs.
+ */
+void nr_dlsch_unscrambling(int16_t *llr, uint32_t size, uint8_t q, uint32_t Nid, uint32_t n_RNTI)
+{
+    /* Call the real OAI function for codeword unscrambling */
+    nr_codeword_unscrambling(llr, size, q, Nid, n_RNTI);
 }
 
 /* ============================================================
