@@ -24,3 +24,15 @@ void nr_layermapping();
 void nr_ldpc();
 void nr_precoding();
 void nr_modulation_test();
+void nr_ofdm_demo();
+
+/* Stub for nr_slot_fep (used by nr_ofdm_demo) */
+int nr_slot_fep(
+    void *ue,
+    const void *frame_parms,
+    unsigned int slot,
+    unsigned int symbol,
+    void *rxdataF,
+    int linktype,
+    uint32_t sample_offset,
+    void *rxdata);

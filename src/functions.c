@@ -712,3 +712,114 @@ void nr_ldpc()
     free(output);
     printf("=== NR LDPC Encoder tests completed ===\n");
 }
+
+void nr_ofdm_demo()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR OFDM FEP Demonstration ===\n");
+    
+    /* OFDM Frame Parameters */
+    const int ofdm_symbol_size = 2048;      /* FFT size */
+    const int nb_antennas_rx = 1;           /* 1 RX antenna */
+    const int nb_antennas_tx = 1;           /* 1 TX antenna */
+    const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
+    const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
+    const int nb_prefix_samples = 176;      /* Cyclic prefix samples */
+    const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;
+    const int num_iterations = 10;
+    
+    printf("OFDM parameters: FFT=%d, CP=%d, symbols/slot=%d, antennas=%d\n",
+           ofdm_symbol_size, nb_prefix_samples, symbols_per_slot, nb_antennas_rx);
+    
+    /* Allocate RX data buffers (aligned) */
+    int32_t *rxdata = aligned_alloc(32, samples_per_frame * sizeof(int32_t));
+    if (!rxdata) {
+        printf("nr_ofdm_demo: rxdata allocation failed\n");
+        return;
+    }
+    memset(rxdata, 0, samples_per_frame * sizeof(int32_t));
+    
+    /* Allocate RX frequency-domain data buffer for one OFDM symbol */
+    int32_t *rxdataF = aligned_alloc(32, ofdm_symbol_size * 2 * sizeof(int32_t));
+    if (!rxdataF) {
+        printf("nr_ofdm_demo: rxdataF allocation failed\n");
+        free(rxdata);
+        return;
+    }
+    memset(rxdataF, 0, ofdm_symbol_size * 2 * sizeof(int32_t));
+    
+    /* Initialize NR DL Frame Parameters structure */
+    NR_DL_FRAME_PARMS frame_parms = {
+        .N_RB_DL = 106,                             /* 106 RBs = 20 MHz */
+        .ofdm_symbol_size = ofdm_symbol_size,
+        .first_carrier_offset = 0,
+        .nb_antennas_rx = nb_antennas_rx,
+        .nb_antennas_tx = nb_antennas_tx,
+        .symbols_per_slot = symbols_per_slot,
+        .slots_per_frame = slots_per_frame,
+        .nb_prefix_samples = nb_prefix_samples,
+        .nb_prefix_samples0 = nb_prefix_samples,
+        .samples_per_slot_wCP = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot,
+        .samples_per_frame = samples_per_frame,
+        .numerology_index = 0,                      /* 15 kHz subcarrier spacing */
+        .ofdm_offset_divisor = 8
+    };
+    
+    printf("Running %d iterations of OFDM FEP...\n", num_iterations);
+    
+    /* Main OFDM FEP loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Fill RX data with test pattern - simple sinusoidal-like values */
+        uint32_t seed = 0xDEADBEEF;
+        for (int i = 0; i < samples_per_frame; i++) {
+            seed = seed * 1103515245 + 12345;
+            int16_t real = (int16_t)((seed >> 16) & 0xFFFF);
+            
+            seed = seed * 1103515245 + 12345;
+            int16_t imag = (int16_t)((seed >> 16) & 0xFFFF);
+            
+            rxdata[i] = (int32_t)real | ((int32_t)imag << 16);
+        }
+        
+        /* Process each slot in the frame */
+        for (int slot = 0; slot < slots_per_frame; slot++) {
+            /* Process each OFDM symbol in the slot */
+            for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
+                /* Call nr_slot_fep to perform DFT on time-domain OFDM symbol */
+                int result = nr_slot_fep(
+                    NULL,                           /* PHY_VARS_NR_UE (NULL for this demo) */
+                    &frame_parms,                   /* Frame parameters */
+                    slot,                           /* Slot number */
+                    symbol,                         /* Symbol index */
+                    (void *)rxdataF,                /* RX data FD */
+                    0,                              /* Downlink (link_type_dl = 0) */
+                    0,                              /* Sample offset */
+                    (void *)&rxdata                 /* RX data TD */
+                );
+                
+                if (result != 0) {
+                    printf("ERROR: nr_slot_fep failed at slot %d, symbol %d\n", slot, symbol);
+                }
+            }
+        }
+        
+        if ((iter % 5) == 0) {
+            printf("  iter %2d: processed slot 0, rxdataF[0]=0x%08X rxdataF[1]=0x%08X\n",
+                   iter,
+                   ((uint32_t *)rxdataF)[0],
+                   ((uint32_t *)rxdataF)[1]);
+        }
+    }
+    
+    printf("\n=== Final OFDM FEP output (first 8 frequency-domain samples) ===\n");
+    for (int i = 0; i < 8 && i < ofdm_symbol_size * 2; i++) {
+        printf("rxdataF[%02d] = 0x%08X\n", i, ((uint32_t *)rxdataF)[i]);
+    }
+    
+    /* Cleanup */
+    free(rxdata);
+    free(rxdataF);
+    printf("=== NR OFDM FEP Demonstration completed ===\n");
+}

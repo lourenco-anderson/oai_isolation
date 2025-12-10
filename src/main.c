@@ -9,6 +9,7 @@ int main(void)
     // nr_precoding();
     // nr_modulation_test();
     // nr_layermapping();
-    nr_ldpc();
+    // nr_ldpc();
+    nr_ofdm_demo();
     return 0;
 }

@@ -333,3 +333,75 @@ int LDPCencoder(uint8_t **input, uint8_t *output, encoder_implemparams_t *impp)
     
     return 0;  /* Success */
 }
+
+/* ============================================================
+ * OFDM SLOT FEP STUB - nr_slot_fep
+ * ============================================================
+ * Simplified implementation for OFDM slot front-end processing (DFT).
+ * This stub simulates OFDM symbol demodulation by performing basic
+ * frequency-domain conversion on time-domain samples.
+ */
+
+int nr_slot_fep(
+    void *ue,                              /* PHY_VARS_NR_UE (NULL in stub) */
+    const void *frame_parms,               /* NR_DL_FRAME_PARMS */
+    unsigned int slot,
+    unsigned int symbol,
+    void *rxdataF,                         /* c16_t array after DFT */
+    int linktype,
+    uint32_t sample_offset,
+    void *rxdata)                          /* c16_t** input time-domain samples */
+{
+    /* This is a simplified stub that simulates OFDM demodulation (DFT).
+     * In a real implementation, this would:
+     * 1. Extract OFDM symbol samples from rxdata (with cyclic prefix removal)
+     * 2. Apply FFT (DFT) to convert time-domain to frequency-domain
+     * 3. Store results in rxdataF
+     * 
+     * For this demo, we'll do a simplified pseudo-demodulation that:
+     * - Copies data from input to output with pseudo-processing
+     * - Simulates frequency-domain output
+     */
+    
+    if (!rxdata || !rxdataF || !frame_parms) {
+        return -1;
+    }
+    
+    /* Cast frame parameters to access structure (simplified) */
+    struct {
+        int ofdm_symbol_size;
+        int samples_per_slot_wCP;
+    } *fp = (struct {int ofdm_symbol_size; int samples_per_slot_wCP;} *)frame_parms;
+    
+    /* Simulate OFDM symbol extraction and DFT
+     * In real implementation, this extracts the symbol from rxdata
+     * at sample_offset and performs FFT to get rxdataF
+     */
+    
+    int32_t **rxdata_ptr = (int32_t **)rxdata;
+    int32_t *rxdataF_ptr = (int32_t *)rxdataF;
+    int fft_size = fp->ofdm_symbol_size;
+    
+    /* Pseudo-demodulation: XOR-based mixing to simulate frequency conversion */
+    uint32_t mix_seed = (slot * 14 + symbol) * 0x12345678;
+    
+    for (int i = 0; i < fft_size; i++) {
+        int32_t sample = 0;
+        
+        if (rxdata_ptr && rxdata_ptr[0]) {
+            int sample_idx = symbol * fft_size + i + sample_offset;
+            if (sample_idx < (fft_size * 14 * 10)) { /* within frame */
+                sample = rxdata_ptr[0][sample_idx];
+            }
+        }
+        
+        /* Apply pseudo-mixing (simulate frequency shift) */
+        mix_seed = mix_seed * 1103515245 + 12345;
+        int16_t mix_factor = (int16_t)((mix_seed >> 16) & 0xFFFF);
+        
+        /* Store in frequency domain (I/Q format) */
+        rxdataF_ptr[i] = (sample ^ (mix_factor << 8));
+    }
+    
+    return 0;  /* Success */
+}
