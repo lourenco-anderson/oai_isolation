@@ -713,6 +713,144 @@ void nr_ldpc()
     printf("=== NR LDPC Encoder tests completed ===\n");
 }
 
+void nr_ch_estimation()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR Channel Estimation (PDSCH) tests ===\n");
+    
+    /* Channel estimation parameters */
+    const int nb_antennas_rx = 2;           /* 2 RX antennas */
+    const int nb_antennas_tx = 1;           /* 1 TX antenna */
+    const int ofdm_symbol_size = 2048;      /* FFT size */
+    const int first_carrier_offset = 0;
+    const int nb_rb_pdsch = 106;            /* 106 RBs = 20 MHz */
+    const int symbols_per_slot = 14;        /* 14 symbols per slot */
+    const int num_iterations = 10;
+    
+    printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d\n",
+           nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot);
+    
+    /* Allocate RX frequency-domain data buffer (rxdataF) */
+    int32_t *rxdataF_data = aligned_alloc(32, 
+        nb_antennas_rx * symbols_per_slot * ofdm_symbol_size * sizeof(int32_t));
+    if (!rxdataF_data) {
+        printf("nr_ch_estimation: rxdataF allocation failed\n");
+        return;
+    }
+    memset(rxdataF_data, 0, nb_antennas_rx * symbols_per_slot * ofdm_symbol_size * sizeof(int32_t));
+    
+    /* Create 2D array view for rxdataF */
+    int32_t (*rxdataF)[ofdm_symbol_size] = (int32_t (*)[ofdm_symbol_size])rxdataF_data;
+    
+    /* Allocate downlink channel estimation buffer (dl_ch) */
+    int32_t *dl_ch_data = aligned_alloc(32,
+        nb_antennas_rx * nb_rb_pdsch * 12 * symbols_per_slot * sizeof(int32_t));
+    if (!dl_ch_data) {
+        printf("nr_ch_estimation: dl_ch allocation failed\n");
+        free(rxdataF_data);
+        return;
+    }
+    memset(dl_ch_data, 0, nb_antennas_rx * nb_rb_pdsch * 12 * symbols_per_slot * sizeof(int32_t));
+    
+    /* Create 2D array view for dl_ch */
+    int32_t (*dl_ch)[nb_rb_pdsch * 12 * symbols_per_slot] = 
+        (int32_t (*)[nb_rb_pdsch * 12 * symbols_per_slot])dl_ch_data;
+    
+    /* Create minimal frame parameters (use simple malloc to avoid incomplete type) */
+    void *frame_parms_data = malloc(sizeof(NR_DL_FRAME_PARMS));
+    if (!frame_parms_data) {
+        printf("nr_ch_estimation: frame_parms allocation failed\n");
+        free(rxdataF_data);
+        free(dl_ch_data);
+        return;
+    }
+    
+    NR_DL_FRAME_PARMS *frame_parms = (NR_DL_FRAME_PARMS *)frame_parms_data;
+    memset(frame_parms, 0, sizeof(NR_DL_FRAME_PARMS));
+    frame_parms->N_RB_DL = nb_rb_pdsch;
+    frame_parms->ofdm_symbol_size = ofdm_symbol_size;
+    frame_parms->first_carrier_offset = first_carrier_offset;
+    frame_parms->nb_antennas_rx = nb_antennas_rx;
+    frame_parms->nb_antennas_tx = nb_antennas_tx;
+    frame_parms->symbols_per_slot = symbols_per_slot;
+    frame_parms->slots_per_frame = 10;
+    frame_parms->nb_prefix_samples = 176;
+    frame_parms->nb_prefix_samples0 = 176;
+    frame_parms->samples_per_slot_wCP = (ofdm_symbol_size + 176) * symbols_per_slot;
+    frame_parms->numerology_index = 0;
+    frame_parms->ofdm_offset_divisor = 8;
+    
+    /* Initialize noise variance array */
+    uint32_t *nvar = aligned_alloc(32, nb_antennas_rx * sizeof(uint32_t));
+    if (!nvar) {
+        printf("nr_ch_estimation: nvar allocation failed\n");
+        free(rxdataF_data);
+        free(dl_ch_data);
+        free(frame_parms_data);
+        return;
+    }
+    for (int i = 0; i < nb_antennas_rx; i++) {
+        nvar[i] = 255;  /* Default noise variance estimate */
+    }
+    
+    printf("Running %d iterations of PDSCH channel estimation...\n", num_iterations);
+    
+    /* Main channel estimation loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Fill rxdataF with test pattern - pseudo-random I/Q values */
+        uint32_t seed = 0xDEADBEEF + iter;
+        for (int ant = 0; ant < nb_antennas_rx; ant++) {
+            for (int sym = 0; sym < symbols_per_slot; sym++) {
+                for (int k = 0; k < ofdm_symbol_size; k++) {
+                    seed = seed * 1103515245 + 12345;
+                    int16_t real = (int16_t)((seed >> 16) & 0xFFFF);
+                    
+                    seed = seed * 1103515245 + 12345;
+                    int16_t imag = (int16_t)((seed >> 16) & 0xFFFF);
+                    
+                    rxdataF[ant * symbols_per_slot + sym][k] = 
+                        (int32_t)real | ((int32_t)imag << 16);
+                }
+            }
+        }
+        
+        /* Call nr_pdsch_channel_estimation for each symbol */
+        for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
+            nr_pdsch_channel_estimation(
+                NULL,                          /* PHY_VARS_NR_UE (can be NULL) */
+                frame_parms,                   /* NR_DL_FRAME_PARMS */
+                symbol,                        /* Symbol index */
+                0,                             /* gNB index */
+                nb_antennas_rx,                /* Number of RX antennas */
+                &dl_ch[0][0],                  /* DL channel estimation output */
+                (void *)rxdataF,               /* RX frequency-domain data */
+                nvar                           /* Noise variance estimates */
+            );
+        }
+        
+        if ((iter % 5) == 0) {
+            printf("  iter %2d: dl_ch[0][0]=0x%08X dl_ch[0][1]=0x%08X\n",
+                   iter,
+                   ((uint32_t *)dl_ch)[0],
+                   ((uint32_t *)dl_ch)[1]);
+        }
+    }
+    
+    printf("\n=== Final channel estimation output (first 8 samples) ===\n");
+    for (int i = 0; i < 8; i++) {
+        printf("dl_ch[0][%02d] = 0x%08X\n", i, ((uint32_t *)dl_ch)[i]);
+    }
+    
+    /* Cleanup */
+    free(rxdataF_data);
+    free(dl_ch_data);
+    free(frame_parms_data);
+    free(nvar);
+    printf("=== NR Channel Estimation (PDSCH) tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */

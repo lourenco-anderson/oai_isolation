@@ -405,3 +405,92 @@ int nr_slot_fep(
     
     return 0;  /* Success */
 }
+
+/* ============================================================
+ * PDSCH CHANNEL ESTIMATION STUB - nr_pdsch_channel_estimation
+ * ============================================================
+ * Simplified implementation for PDSCH channel estimation using DMRS.
+ * This stub simulates channel impulse response estimation based on
+ * DMRS pilot signals in the received frequency-domain data.
+ */
+
+void nr_pdsch_channel_estimation(
+    void *ue_ptr,                           /* PHY_VARS_NR_UE */
+    const void *frame_parms_ptr,            /* NR_DL_FRAME_PARMS */
+    unsigned int symbol,
+    uint8_t gNB_id,
+    uint8_t nb_antennas_rx,
+    int32_t *dl_ch,
+    void *rxdataF_ptr,                      /* c16_t array */
+    uint32_t *nvar)
+{
+    /* This is a simplified stub that simulates PDSCH channel estimation.
+     * In a real implementation, this would:
+     * 1. Extract DMRS (DeModulation Reference Signal) pilot symbols
+     * 2. Perform channel interpolation in frequency domain
+     * 3. Estimate channel impulse response per subcarrier
+     * 4. Estimate noise variance from pilot errors
+     * 
+     * For this demo, we'll do a simplified pseudo-estimation:
+     * - Copy received signal to channel estimate with filtering
+     * - Apply pseudo-interpolation using weighted mixing
+     * - Update noise variance estimate
+     */
+    
+    if (!rxdataF_ptr || !dl_ch || !frame_parms_ptr) {
+        return;
+    }
+    
+    /* Cast frame parameters (simplified structure) */
+    struct {
+        int ofdm_symbol_size;
+        int N_RB_DL;
+        int nb_antennas_rx;
+    } *fp = (struct {int ofdm_symbol_size; int N_RB_DL; int nb_antennas_rx;} *)frame_parms_ptr;
+    
+    int32_t *rxdataF = (int32_t *)rxdataF_ptr;
+    int fft_size = fp->ofdm_symbol_size;
+    int num_rb = fp->N_RB_DL;
+    
+    /* Pseudo-channel estimation using DMRS pilot-based interpolation */
+    uint32_t ch_seed = (gNB_id * 256 + symbol) * 0x87654321;
+    uint32_t pilot_error_sum = 0;
+    
+    for (int ant = 0; ant < nb_antennas_rx; ant++) {
+        for (int k = 0; k < fft_size; k++) {
+            int32_t rxF_sample = 0;
+            
+            /* Get received sample */
+            if (rxdataF) {
+                int idx = ant * fft_size + k;
+                rxF_sample = rxdataF[idx];
+            }
+            
+            /* Simulate DMRS-based channel interpolation */
+            ch_seed = ch_seed * 1103515245 + 12345;
+            int16_t ch_factor = (int16_t)((ch_seed >> 16) & 0xFFFF);
+            
+            /* Low-pass filtering simulation: apply weighted mixing */
+            ch_seed = ch_seed * 1103515245 + 12345;
+            int16_t weight = (int16_t)((ch_seed >> 16) & 0x7FFF) >> 8;  /* 0-127 */
+            
+            /* Channel estimate = weighted average of signal and neighboring estimates */
+            int32_t ch_est = (rxF_sample * weight) >> 7;
+            ch_est ^= (ch_factor << 8);
+            
+            /* Store channel estimate */
+            int ch_idx = ant * fft_size + k;
+            dl_ch[ch_idx] = ch_est;
+            
+            /* Accumulate pilot error for noise variance estimation */
+            pilot_error_sum += (ch_est ^ rxF_sample) & 0xFFFF;
+        }
+        
+        /* Update noise variance estimate for this antenna */
+        if (nvar) {
+            ch_seed = ch_seed * 1103515245 + 12345;
+            uint32_t noise_est = (pilot_error_sum >> 8) + (ch_seed & 0xFF);
+            nvar[ant] = (noise_est < 1000) ? noise_est : 255;
+        }
+    }
+}

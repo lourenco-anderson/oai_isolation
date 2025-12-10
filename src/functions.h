@@ -15,6 +15,9 @@
 #define INIT 0xB704CE
 #define N 24072
 
+/* Forward declaration of PHY_VARS_NR_UE (avoid including defs_nr_UE.h due to dependencies) */
+typedef struct PHY_VARS_NR_UE_s PHY_VARS_NR_UE;
+
 // #include "PHY/CODING/coding_defs.h"
 
 void nr_scramble();
@@ -25,6 +28,18 @@ void nr_ldpc();
 void nr_precoding();
 void nr_modulation_test();
 void nr_ofdm_demo();
+void nr_ch_estimation();
+
+/* Stub for nr_pdsch_channel_estimation (used by nr_ch_estimation) */
+void nr_pdsch_channel_estimation(
+    PHY_VARS_NR_UE *ue,
+    const NR_DL_FRAME_PARMS *frame_parms,
+    unsigned int symbol,
+    uint8_t gNB_id,
+    uint8_t nb_antennas_rx,
+    int32_t *dl_ch,
+    void *rxdataF,
+    uint32_t *nvar);
 
 /* Stub for nr_slot_fep (used by nr_ofdm_demo) */
 int nr_slot_fep(

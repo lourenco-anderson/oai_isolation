@@ -10,6 +10,7 @@ int main(void)
     // nr_modulation_test();
     // nr_layermapping();
     // nr_ldpc();
-    nr_ofdm_demo();
+    // nr_ofdm_demo();
+    nr_ch_estimation();
     return 0;
 }
