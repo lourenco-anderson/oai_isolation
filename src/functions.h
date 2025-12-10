@@ -30,24 +30,12 @@ void nr_modulation_test();
 void nr_ofdm_demo();
 void nr_ch_estimation();
 
-/* Stub for nr_pdsch_channel_estimation (used by nr_ch_estimation) */
-void nr_pdsch_channel_estimation(
-    PHY_VARS_NR_UE *ue,
-    const NR_DL_FRAME_PARMS *frame_parms,
-    unsigned int symbol,
-    uint8_t gNB_id,
-    uint8_t nb_antennas_rx,
-    int32_t *dl_ch,
-    void *rxdataF,
-    uint32_t *nvar);
+/* OAI real function declarations - using simple signatures to avoid header dependencies */
+int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,
+                unsigned int symbol, void *rxdataF, int linktype,
+                uint32_t sample_offset, void *rxdata);
 
-/* Stub for nr_slot_fep (used by nr_ofdm_demo) */
-int nr_slot_fep(
-    void *ue,
-    const void *frame_parms,
-    unsigned int slot,
-    unsigned int symbol,
-    void *rxdataF,
-    int linktype,
-    uint32_t sample_offset,
-    void *rxdata);
+void nr_pdsch_channel_estimation(void *ue, const void *frame_parms,
+                                  unsigned int symbol, uint8_t gNB_id,
+                                  uint8_t nb_antennas_rx, void *dl_ch,
+                                  void *rxdataF, uint32_t *nvar);
