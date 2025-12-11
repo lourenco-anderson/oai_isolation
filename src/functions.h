@@ -42,6 +42,7 @@ void nr_layer_demapping_test();
 void nr_crc_check();
 void nr_soft_demod();
 void nr_mmse_eq();
+void nr_ldpc_dec();
 
 /* OAI real function declarations - using simple signatures to avoid header dependencies */
 int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,

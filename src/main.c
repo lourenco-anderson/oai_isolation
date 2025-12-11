@@ -16,6 +16,8 @@ int main(void)
     // nr_layer_demapping_test();
     // nr_crc_check();
     // nr_soft_demod();
-    nr_mmse_eq();
+    // nr_mmse_eq();
+    nr_ldpc_dec();
+    
     return 0;
 }

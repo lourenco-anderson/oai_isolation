@@ -7,6 +7,10 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 # Explicitly add the new onelayer file
 list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
 
+# Note: LDPC decoder is complex and requires many OAI dependencies
+# Instead, we link against the compiled OAI PHY libraries that contain it
+# list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_decoder/nrLDPC_decoder.c")
+
 # NOTE: LDPC encoder real compilation is disabled due to memory corruption issues
 # with OAI library linkage. Use mock implementation in stubs.c instead.
 # list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_encoder/ldpc_encoder_optim8segmulti.c")

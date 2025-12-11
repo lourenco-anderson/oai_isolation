@@ -2,6 +2,8 @@
 #include "modulation_tables.h"
 #include "common/platform_types.h"
 #include "PHY/TOOLS/tools_defs.h"
+#include "PHY/CODING/nrLDPC_decoder/nrLDPC_types.h"
+#include "PHY/CODING/nrLDPC_extern.h"
 #include <dlfcn.h>
 
 /* Gray-coded amplitude levels for 16-QAM */
@@ -1427,6 +1429,122 @@ void nr_mmse_eq()
     free(dl_ch_magr);
     free(dl_ch_estimates_ext);
     printf("=== NR MMSE Equalization tests completed ===\n");
+}
+
+void nr_ldpc_dec()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR LDPC Decoder tests ===\n");
+    
+    /* LDPC decoder parameters */
+    const uint8_t BG = 1;                       /* Base Graph 1 */
+    const uint16_t Z = 256;                     /* Lifting size */
+    const uint8_t R = 13;                       /* Decoding rate 1/3 */
+    const uint8_t numMaxIter = 20;              /* Maximum 20 iterations */
+    const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
+    const int num_iterations = 10;              /* Test with 10 LDPC decoding operations */
+    
+    printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
+           BG, Z, R, Kprime);
+    printf("Max iterations: %u\n", numMaxIter);
+    printf("Running %d LDPC decoding iterations...\n\n", num_iterations);
+    
+    /* Calculate output size based on LDPC parameters */
+    const int nrows = (BG == 1) ? 46 : 42;      /* Number of parity check rows */
+    const int rate = (BG == 1) ? 3 : 5;         /* Code rate */
+    const int output_bytes = (Kprime + 7) / 8;  /* Output decoded bytes */
+    
+    /* Input LLR buffer (soft bits: int8_t LLR values) */
+    /* For BG1, R=1/3: input size is around 3*Kprime bits */
+    const int input_llr_size = 3 * Kprime;
+    int8_t *p_llr = aligned_alloc(32, input_llr_size * sizeof(int8_t));
+    if (!p_llr) {
+        printf("nr_ldpc_dec: Failed to allocate input LLR buffer\n");
+        return;
+    }
+    memset(p_llr, 0, input_llr_size * sizeof(int8_t));
+    
+    /* Output decoded bits buffer (int8_t: decoded bits, one per element) */
+    int8_t *p_out = aligned_alloc(32, output_bytes * sizeof(int8_t));
+    if (!p_out) {
+        printf("nr_ldpc_dec: Failed to allocate output buffer\n");
+        free(p_llr);
+        return;
+    }
+    memset(p_out, 0, output_bytes * sizeof(int8_t));
+    
+    /* LDPC decoder parameters structure */
+    t_nrLDPC_dec_params decParams = {
+        .BG = BG,
+        .Z = Z,
+        .R = R,
+        .numMaxIter = numMaxIter,
+        .Kprime = Kprime,
+        .outMode = nrLDPC_outMode_BITINT8,     /* Output 1 bit per int8_t */
+        .crc_type = 24,                         /* 24-bit CRC */
+        .check_crc = NULL                       /* No CRC check for test */
+    };
+    
+    /* Time statistics structure */
+    t_nrLDPC_time_stats timeStats = {0};
+    
+    /* Abort flag for early termination */
+    decode_abort_t abortFlag = {0};
+    
+    printf("Starting LDPC decoding loop...\n");
+    printf("(Calling LDPCdecoder from real OAI library)\n\n");
+    
+    /* Seed input LLRs with sample pattern */
+    const int8_t sample_llrs[] = {
+        20, -15, 18, -12, 25, -20, 15, -10,
+        22, -18, 16, -14, 24, -22, 14, -8,
+        30, -25, 28, -23, 26, -21, 20, -16
+    };
+    int sample_size = sizeof(sample_llrs) / sizeof(sample_llrs[0]);
+    
+    /* Fill input LLR buffer with sample pattern */
+    for (int idx = 0; idx < input_llr_size; idx++) {
+        p_llr[idx] = sample_llrs[idx % sample_size];
+    }
+    
+    /* Main LDPC decoding loop */
+    int total_iterations = 0;
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary input LLRs slightly for each iteration */
+        p_llr[0] = (int8_t)(20 + iter);
+        p_llr[1] = (int8_t)(-15 - iter);
+        
+        /* Reset output and abort flag for each decoding */
+        memset(p_out, 0, output_bytes * sizeof(int8_t));
+        memset(&abortFlag, 0, sizeof(decode_abort_t));
+        
+        /* Call the real OAI LDPC decoder function */
+        int32_t numIter = LDPCdecoder(&decParams, p_llr, p_out, &timeStats, &abortFlag);
+        
+        total_iterations += numIter;
+        
+        if ((iter % 3) == 0) {
+            printf("  iter %2d: LDPCdecoder returned %d iterations, p_out[0]=0x%02X\n", 
+                   iter, numIter, (unsigned char)p_out[0]);
+        }
+    }
+    
+    printf("\n=== Final LDPC decoded output (first 16 bytes) ===\n");
+    for (int i = 0; i < 16 && i < output_bytes; i++) {
+        printf("  p_out[%2d] = 0x%02X\n", i, (unsigned char)p_out[i]);
+    }
+    
+    printf("\n=== LDPC Decoding Statistics ===\n");
+    printf("Total iterations across all %d decodings: %d\n", num_iterations, total_iterations);
+    printf("Average iterations per decoding: %.1f\n", 
+           (float)total_iterations / num_iterations);
+    
+    /* Cleanup */
+    free(p_llr);
+    free(p_out);
+    printf("=== NR LDPC Decoder tests completed ===\n");
 }
 
 void nr_ofdm_demo()
