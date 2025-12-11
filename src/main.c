@@ -14,6 +14,7 @@ int main(void)
     // nr_ch_estimation();
     // nr_descrambling();
     // nr_layer_demapping_test();
-    nr_crc_check();
+    // nr_crc_check();
+    nr_soft_demod();
     return 0;
 }

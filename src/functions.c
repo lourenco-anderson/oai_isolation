@@ -1138,6 +1138,143 @@ void nr_crc_check()
     printf("=== NR CRC Check tests completed ===\n");
 }
 
+void nr_soft_demod()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR Soft Demodulation (LLR computation) tests ===\n");
+    
+    /* Soft demodulation parameters */
+    const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
+    const int nbRx = 2;                         /* 2 RX antennas */
+    const int Nl = 2;                           /* 2 layers */
+    const uint32_t len = 512;                   /* Resource elements per symbol */
+    const unsigned char symbol = 5;             /* OFDM symbol index */
+    const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
+    const int num_iterations = 100;             /* 100 iterations */
+    
+    printf("Soft demod parameters: rx_symbol_size=%u, nbRx=%d, Nl=%d, len=%u\n",
+           rx_size_symbol, nbRx, Nl, len);
+    printf("Running %d iterations...\n", num_iterations);
+    
+    /* Allocate rxdataF_comp buffer (compensated received symbols) */
+    int32_t (*rxdataF_comp)[nbRx][rx_size_symbol * NR_SYMBOLS_PER_SLOT] = 
+        aligned_alloc(32, sizeof(int32_t) * Nl * nbRx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    if (!rxdataF_comp) {
+        printf("nr_soft_demod: rxdataF_comp allocation failed\n");
+        return;
+    }
+    memset(rxdataF_comp, 0, sizeof(int32_t) * Nl * nbRx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    
+    /* Allocate channel magnitude buffers for QAM demodulation */
+    c16_t *dl_ch_mag = aligned_alloc(32, sizeof(c16_t) * rx_size_symbol);
+    c16_t *dl_ch_magb = aligned_alloc(32, sizeof(c16_t) * rx_size_symbol);
+    c16_t *dl_ch_magr = aligned_alloc(32, sizeof(c16_t) * rx_size_symbol);
+    
+    if (!dl_ch_mag || !dl_ch_magb || !dl_ch_magr) {
+        printf("nr_soft_demod: channel magnitude buffer allocation failed\n");
+        free(rxdataF_comp);
+        free(dl_ch_mag);
+        free(dl_ch_magb);
+        return;
+    }
+    memset(dl_ch_mag, 0, sizeof(c16_t) * rx_size_symbol);
+    memset(dl_ch_magb, 0, sizeof(c16_t) * rx_size_symbol);
+    memset(dl_ch_magr, 0, sizeof(c16_t) * rx_size_symbol);
+    
+    /* Allocate layer LLR output buffer */
+    const int layer_llr_size = len * 8;  /* Max bits per RE (256-QAM) */
+    int16_t (*layer_llr)[layer_llr_size] = aligned_alloc(32, sizeof(int16_t) * Nl * layer_llr_size);
+    if (!layer_llr) {
+        printf("nr_soft_demod: layer_llr allocation failed\n");
+        free(rxdataF_comp);
+        free(dl_ch_mag);
+        free(dl_ch_magb);
+        free(dl_ch_magr);
+        return;
+    }
+    memset(layer_llr, 0, sizeof(int16_t) * Nl * layer_llr_size);
+    
+    /* Create mock NR_UE_DLSCH_t structures for two codewords */
+    NR_UE_DLSCH_t dlsch[2];
+    memset(dlsch, 0, sizeof(dlsch));
+    
+    /* Configure first DLSCH with 16-QAM (mod order 4) */
+    dlsch[0].Nl = Nl;
+    dlsch[0].dlsch_config.qamModOrder = 4;  /* 16-QAM */
+    
+    /* Create mock HARQ structures (NULL for second codeword in this test) */
+    NR_DL_UE_HARQ_t *dlsch0_harq = NULL;
+    NR_DL_UE_HARQ_t *dlsch1_harq = NULL;
+    
+    /* Seed rxdataF_comp with sample received symbols (I/Q pairs) */
+    const int32_t sample_iq[] = {
+        0x10001000, 0x20002000, 0xF000F000, 0xE000E000,
+        0x30003000, 0x40004000, 0xD000D000, 0xC000C000,
+        0x50005000, 0x60006000, 0xB000B000, 0xA0009000
+    };
+    int sample_size = sizeof(sample_iq) / sizeof(sample_iq[0]);
+    
+    /* Fill first symbol of first layer/antenna with samples */
+    for (int i = 0; i < sample_size && i < (int)len; i++) {
+        rxdataF_comp[0][0][symbol * rx_size_symbol + i] = sample_iq[i % sample_size];
+    }
+    
+    /* Seed channel magnitude buffers with typical values */
+    for (uint32_t i = 0; i < len; i++) {
+        dl_ch_mag[i].r = 0x2000;   /* Channel magnitude for 16-QAM level 1 */
+        dl_ch_mag[i].i = 0x2000;
+        dl_ch_magb[i].r = 0x4000;  /* Channel magnitude for 64-QAM level 2 */
+        dl_ch_magb[i].i = 0x4000;
+        dl_ch_magr[i].r = 0x6000;  /* Channel magnitude for 256-QAM level 3 */
+        dl_ch_magr[i].i = 0x6000;
+    }
+    
+    printf("Starting soft demodulation loop...\n");
+    
+    /* Main soft demodulation loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary first I/Q sample so each run differs */
+        rxdataF_comp[0][0][symbol * rx_size_symbol] = 
+            (int32_t)(0x10001000 + (iter << 8));
+        
+        /* Call nr_dlsch_llr to compute LLRs from received symbols */
+        nr_dlsch_llr(rx_size_symbol,
+                     nbRx,
+                     layer_llr_size,
+                     layer_llr,
+                     rxdataF_comp,
+                     dl_ch_mag,
+                     dl_ch_magb,
+                     dl_ch_magr,
+                     dlsch0_harq,
+                     dlsch1_harq,
+                     symbol,
+                     len,
+                     dlsch,
+                     llr_offset_symbol);
+        
+        if ((iter % 20) == 0) {
+            printf("  iter %3d: layer_llr[0][0]=%4d, layer_llr[0][1]=%4d\n",
+                   iter, layer_llr[0][0], layer_llr[0][1]);
+        }
+    }
+    
+    printf("\n=== Final LLR output (first 16 soft bits, layer 0) ===\n");
+    for (int i = 0; i < 16 && i < layer_llr_size; i++) {
+        printf("  layer_llr[0][%02d] = %4d\n", i, layer_llr[0][i]);
+    }
+    
+    /* Cleanup */
+    free(rxdataF_comp);
+    free(dl_ch_mag);
+    free(dl_ch_magb);
+    free(dl_ch_magr);
+    free(layer_llr);
+    printf("=== NR Soft Demodulation tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */

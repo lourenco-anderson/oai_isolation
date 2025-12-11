@@ -52,6 +52,7 @@ target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
 
 # Restored OAI libraries for layer mapping and other functions
 target_link_libraries(oai_isolation PRIVATE
+    PHY_NR_UE
     PHY_NR_COMMON     
     PHY_COMMON         
     CONFIG_LIB             
@@ -59,7 +60,10 @@ target_link_libraries(oai_isolation PRIVATE
     PHY               
     UTIL           
     SCHED_LIB              
-    SCHED_NR_LIB           
+    SCHED_NR_LIB
+    ${OAI_BUILD_DIR}/openair1/PHY/nr_phy_common/libnr_phy_common.a
+    PHY_COMMON
+    UTIL
 
     # Dynamic libs
     nrscope

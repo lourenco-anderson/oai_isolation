@@ -10,6 +10,7 @@
 #include "softmodem-common.h"
 #include "PHY/impl_defs_top.h"
 #include "nr_dlsch_onelayer.h"
+#include "PHY/NR_UE_TRANSPORT/nr_transport_ue.h"
 
 /* SIMD initialization needed for unscrambling */
 extern void init_byte2m128i(void);
@@ -39,6 +40,7 @@ void nr_ch_estimation();
 void nr_descrambling();
 void nr_layer_demapping_test();
 void nr_crc_check();
+void nr_soft_demod();
 
 /* OAI real function declarations - using simple signatures to avoid header dependencies */
 int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,

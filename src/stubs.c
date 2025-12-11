@@ -7,6 +7,23 @@
 #include <pthread.h>
 #include <simde/x86/sse2.h>
 
+/* Forward declarations for NR LLR functions and types - avoid full header includes */
+typedef struct {
+    int16_t r;
+    int16_t i;
+} c16_t;
+
+typedef struct NR_UE_DLSCH NR_UE_DLSCH_t;
+typedef struct NR_DL_UE_HARQ NR_DL_UE_HARQ_t;
+
+/* External declarations for OAI demodulation functions */
+extern void nr_qpsk_llr(int32_t *rxdataF_comp, int16_t *llr, uint32_t nb_re);
+extern void nr_16qam_llr(int32_t *rxdataF_comp, c16_t *ch_mag_in, int16_t *llr, uint32_t nb_re);
+extern void nr_64qam_llr(int32_t *rxdataF_comp, c16_t *ch_mag, c16_t *ch_mag2, int16_t *llr, uint32_t nb_re);
+extern void nr_256qam_llr(int32_t *rxdataF_comp, c16_t *ch_mag, c16_t *ch_mag2, c16_t *ch_mag3, int16_t *llr, uint32_t nb_re);
+
+#define NR_SYMBOLS_PER_SLOT 14
+
 /* ============================================================
  * LOGGING SYSTEM STUBS - Match OAI's actual log structures
  * ============================================================ */
@@ -179,23 +196,11 @@ void exit_function(const char *file, const char *function, const int line, const
     exit(EXIT_FAILURE);
 }
 
-/* SIMD byte2m128i lookup table - used by unscrambling for SIMD bit operations
- * This replaces the old byte2m128i() function stub with the real lookup table */
-simde__m128i byte2m128i[256];
-
-void init_byte2m128i(void)
-{
-    for (int s = 0; s < 256; s++) {
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * (s & 1)), 0);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 1) & 1)), 1);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 2) & 1)), 2);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 3) & 1)), 3);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 4) & 1)), 4);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 5) & 1)), 5);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 6) & 1)), 6);
-        byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s], (1 - 2 * ((s >> 7) & 1)), 7);
-    }
-}
+/* SIMD byte2m128i lookup table - NOW PROVIDED BY libnr_phy_common.a
+ * Removed duplicate definition to avoid linker errors */
+/* simde__m128i byte2m128i[256]; */
+/* void init_byte2m128i(void) { ... } */
+/* Function now provided by OAI's nr_phy_common library */
 
 /* Stub for get_softmodem_params - returns softmodem parameters */
 typedef struct {
@@ -523,6 +528,131 @@ void nr_pdsch_channel_estimation(void *ue_ptr,
             ch_seed = ch_seed * 1103515245 + 12345;
             uint32_t noise_est = (pilot_error_sum >> 8) + (ch_seed & 0xFF);
             nvar[ant] = (noise_est < 1000) ? noise_est : 255;
+        }
+    }
+}
+
+/* Helper structure to access dlsch parameters without full type definition */
+struct dlsch_minimal {
+    char padding[128];  /* Skip internal fields */
+    uint8_t Nl;
+    char padding2[128];
+    struct {
+        char config_padding[256];
+        uint8_t qamModOrder;
+    } dlsch_config;
+};
+
+/* Stub for nr_dlsch_llr - compute LLRs from received symbols
+ * This is a simplified version that calls the actual OAI demodulation functions
+ * based on modulation order (QPSK, 16-QAM, 64-QAM, 256-QAM) */
+void nr_dlsch_llr(uint32_t rx_size_symbol,
+                  int nbRx,
+                  uint32_t sz,
+                  int16_t layer_llr[][sz],
+                  int32_t rxdataF_comp[][nbRx][rx_size_symbol * NR_SYMBOLS_PER_SLOT],
+                  c16_t dl_ch_mag[rx_size_symbol],
+                  c16_t dl_ch_magb[rx_size_symbol],
+                  c16_t dl_ch_magr[rx_size_symbol],
+                  NR_DL_UE_HARQ_t *dlsch0_harq,
+                  NR_DL_UE_HARQ_t *dlsch1_harq,
+                  unsigned char symbol,
+                  uint32_t len,
+                  NR_UE_DLSCH_t *dlsch,
+                  uint32_t llr_offset_symbol)
+{
+    /* Extract modulation order from dlsch config using minimal struct */
+    struct dlsch_minimal *dlsch_min = (struct dlsch_minimal *)dlsch;
+    int mod_order = dlsch_min[0].dlsch_config.qamModOrder;
+    int Nl = dlsch_min[0].Nl;
+    
+    /* Compute LLRs based on modulation order */
+    switch (mod_order) {
+        case 2:  /* QPSK */
+            for (int l = 0; l < Nl; l++) {
+                nr_qpsk_llr(&rxdataF_comp[l][0][symbol * rx_size_symbol],
+                           layer_llr[l] + llr_offset_symbol,
+                           len);
+            }
+            break;
+            
+        case 4:  /* 16-QAM */
+            for (int l = 0; l < Nl; l++) {
+                nr_16qam_llr(&rxdataF_comp[l][0][symbol * rx_size_symbol],
+                            dl_ch_mag,
+                            layer_llr[l] + llr_offset_symbol,
+                            len);
+            }
+            break;
+            
+        case 6:  /* 64-QAM */
+            for (int l = 0; l < Nl; l++) {
+                nr_64qam_llr(&rxdataF_comp[l][0][symbol * rx_size_symbol],
+                            dl_ch_mag,
+                            dl_ch_magb,
+                            layer_llr[l] + llr_offset_symbol,
+                            len);
+            }
+            break;
+            
+        case 8:  /* 256-QAM */
+            for (int l = 0; l < Nl; l++) {
+                nr_256qam_llr(&rxdataF_comp[l][0][symbol * rx_size_symbol],
+                             dl_ch_mag,
+                             dl_ch_magb,
+                             dl_ch_magr,
+                             layer_llr[l] + llr_offset_symbol,
+                             len);
+            }
+            break;
+            
+        default:
+            /* Unknown modulation order - fill with zeros */
+            for (int l = 0; l < Nl; l++) {
+                memset(layer_llr[l] + llr_offset_symbol, 0, len * mod_order * sizeof(int16_t));
+            }
+            break;
+    }
+    
+    /* Handle second codeword if present (dual codeword transmission) */
+    if (dlsch1_harq) {
+        int mod_order_cw1 = dlsch_min[1].dlsch_config.qamModOrder;
+        
+        switch (mod_order_cw1) {
+            case 2:  /* QPSK */
+                nr_qpsk_llr(&rxdataF_comp[0][0][symbol * rx_size_symbol],
+                           layer_llr[0] + llr_offset_symbol,
+                           len);
+                break;
+                
+            case 4:  /* 16-QAM */
+                nr_16qam_llr(&rxdataF_comp[0][0][symbol * rx_size_symbol],
+                            dl_ch_mag,
+                            layer_llr[0] + llr_offset_symbol,
+                            len);
+                break;
+                
+            case 6:  /* 64-QAM */
+                nr_64qam_llr(&rxdataF_comp[0][0][symbol * rx_size_symbol],
+                            dl_ch_mag,
+                            dl_ch_magb,
+                            layer_llr[0] + llr_offset_symbol,
+                            len);
+                break;
+                
+            case 8:  /* 256-QAM */
+                nr_256qam_llr(&rxdataF_comp[0][0][symbol * rx_size_symbol],
+                             dl_ch_mag,
+                             dl_ch_magb,
+                             dl_ch_magr,
+                             layer_llr[0] + llr_offset_symbol,
+                             len);
+                break;
+                
+            default:
+                /* Unknown modulation - fill with zeros */
+                memset(layer_llr[0] + llr_offset_symbol, 0, len * mod_order_cw1 * sizeof(int16_t));
+                break;
         }
     }
 }
