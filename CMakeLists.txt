@@ -52,7 +52,6 @@ target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
 
 # Restored OAI libraries for layer mapping and other functions
 target_link_libraries(oai_isolation PRIVATE
-    PHY_NR_UE
     PHY_NR_COMMON     
     PHY_COMMON         
     CONFIG_LIB             

@@ -1275,6 +1275,160 @@ void nr_soft_demod()
     printf("=== NR Soft Demodulation tests completed ===\n");
 }
 
+void nr_mmse_eq()
+{
+    /* Initialize the logging system first */
+    logInit();
+    
+    printf("=== Starting NR MMSE Equalization tests ===\n");
+    
+    /* MMSE equalization parameters */
+    const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
+    const unsigned char n_rx = 2;               /* 2 RX antennas */
+    const unsigned char nl = 2;                 /* 2 layers (MIMO) */
+    const unsigned short nb_rb = 106;           /* 106 RBs (20 MHz) */
+    const unsigned char mod_order = 4;          /* 16-QAM */
+    const int length = 512;                     /* Resource elements */
+    const uint32_t noise_var = 100;             /* Noise variance */
+    const int num_iterations = 50;              /* 50 iterations */
+    
+    printf("MMSE EQ parameters: rx_size=%u, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
+           rx_size_symbol, n_rx, nl, nb_rb, mod_order);
+    printf("length=%d, noise_var=%u\n", length, noise_var);
+    printf("Running %d iterations...\n", num_iterations);
+    printf("NOTE: Using simplified MMSE wrapper (demonstrates structure)\n\n");
+    
+    /* Allocate rxdataF_comp buffer (compensated received symbols) */
+    int32_t (*rxdataF_comp)[n_rx][rx_size_symbol * NR_SYMBOLS_PER_SLOT] = 
+        aligned_alloc(32, sizeof(int32_t) * nl * n_rx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    if (!rxdataF_comp) {
+        printf("nr_mmse_eq: rxdataF_comp allocation failed\n");
+        return;
+    }
+    memset(rxdataF_comp, 0, sizeof(int32_t) * nl * n_rx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    
+    /* Allocate channel magnitude buffers for QAM */
+    c16_t (*dl_ch_mag)[n_rx][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    c16_t (*dl_ch_magb)[n_rx][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    c16_t (*dl_ch_magr)[n_rx][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    
+    if (!dl_ch_mag || !dl_ch_magb || !dl_ch_magr) {
+        printf("nr_mmse_eq: channel magnitude buffer allocation failed\n");
+        free(rxdataF_comp);
+        free(dl_ch_mag);
+        free(dl_ch_magb);
+        return;
+    }
+    memset(dl_ch_mag, 0, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    memset(dl_ch_magb, 0, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    memset(dl_ch_magr, 0, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    
+    /* Allocate channel estimates buffer */
+    const int matrixSz = n_rx * nl;
+    int32_t (*dl_ch_estimates_ext)[rx_size_symbol] = 
+        aligned_alloc(32, sizeof(int32_t) * matrixSz * rx_size_symbol);
+    if (!dl_ch_estimates_ext) {
+        printf("nr_mmse_eq: dl_ch_estimates_ext allocation failed\n");
+        free(rxdataF_comp);
+        free(dl_ch_mag);
+        free(dl_ch_magb);
+        free(dl_ch_magr);
+        return;
+    }
+    memset(dl_ch_estimates_ext, 0, sizeof(int32_t) * matrixSz * rx_size_symbol);
+    
+    /* Seed rxdataF_comp with sample received symbols (I/Q pairs) */
+    const int32_t sample_rx[] = {
+        0x10001000, 0x20002000, 0xF000F000, 0xE000E000,
+        0x30003000, 0x40004000, 0xD000D000, 0xC000C000,
+        0x50005000, 0x60006000, 0xB000B000, 0xA0009000
+    };
+    int sample_size = sizeof(sample_rx) / sizeof(sample_rx[0]);
+    
+    /* Fill first symbol of each layer/antenna with samples */
+    const unsigned char symbol = 5;
+    for (int layer = 0; layer < nl; layer++) {
+        for (int ant = 0; ant < n_rx; ant++) {
+            for (int i = 0; i < sample_size && i < length; i++) {
+                rxdataF_comp[layer][ant][symbol * rx_size_symbol + i] = 
+                    sample_rx[i % sample_size] + (layer << 16) + (ant << 8);
+            }
+        }
+    }
+    
+    /* Seed channel estimates with sample values */
+    const int32_t sample_ch[] = {
+        0x20002000, 0x1F001F00, 0x21002100, 0x20002000
+    };
+    for (int idx = 0; idx < matrixSz; idx++) {
+        for (int i = 0; i < length; i++) {
+            dl_ch_estimates_ext[idx][i] = sample_ch[i % 4] + (idx << 12);
+        }
+    }
+    
+    /* Seed channel magnitude buffers with typical values for 16-QAM */
+    for (int layer = 0; layer < nl; layer++) {
+        for (int ant = 0; ant < n_rx; ant++) {
+            for (int i = 0; i < length; i++) {
+                dl_ch_mag[layer][ant][i].r = 0x2000;   /* Level 1 magnitude */
+                dl_ch_mag[layer][ant][i].i = 0x2000;
+                dl_ch_magb[layer][ant][i].r = 0x4000;  /* Level 2 magnitude */
+                dl_ch_magb[layer][ant][i].i = 0x4000;
+                dl_ch_magr[layer][ant][i].r = 0x6000;  /* Level 3 magnitude */
+                dl_ch_magr[layer][ant][i].i = 0x6000;
+            }
+        }
+    }
+    
+    printf("Starting MMSE equalization loop...\n");
+    printf("(Calling nr_dlsch_mmse for MMSE equalization)\n\n");
+    
+    /* Main MMSE equalization loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Vary first sample so each run differs */
+        rxdataF_comp[0][0][symbol * rx_size_symbol] = 
+            (int32_t)(0x10001000 + (iter << 8));
+        
+        /* Call nr_dlsch_mmse for MMSE equalization */
+        nr_dlsch_mmse(rx_size_symbol,
+                      n_rx,
+                      nl,
+                      rxdataF_comp,
+                      dl_ch_mag,
+                      dl_ch_magb,
+                      dl_ch_magr,
+                      dl_ch_estimates_ext,
+                      nb_rb,
+                      mod_order,
+                      0,           /* shift */
+                      symbol,
+                      length,
+                      noise_var);
+        
+        if ((iter % 10) == 0) {
+            int32_t *comp_ptr = &rxdataF_comp[0][0][symbol * rx_size_symbol];
+            printf("  iter %3d: rxdataF_comp[0][0] = 0x%08X\n", iter, comp_ptr[0]);
+        }
+    }
+    
+    printf("\n=== Final equalized output (first 8 samples, layer 0, ant 0) ===\n");
+    int32_t *final_ptr = &rxdataF_comp[0][0][symbol * rx_size_symbol];
+    for (int i = 0; i < 8; i++) {
+        printf("  rxdataF_comp[%d] = 0x%08X\n", i, final_ptr[i]);
+    }
+    
+    /* Cleanup */
+    free(rxdataF_comp);
+    free(dl_ch_mag);
+    free(dl_ch_magb);
+    free(dl_ch_magr);
+    free(dl_ch_estimates_ext);
+    printf("=== NR MMSE Equalization tests completed ===\n");
+}
+
 void nr_ofdm_demo()
 {
     /* Initialize the logging system first */
