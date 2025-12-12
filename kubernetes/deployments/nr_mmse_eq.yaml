@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nr_mmse_eq
+  namespace: oai-functions
+  labels:
+    app: nr_mmse_eq
+    component: oai-function
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nr_mmse_eq
+  template:
+    metadata:
+      labels:
+        app: nr_mmse_eq
+        component: oai-function
+    spec:
+      containers:
+      - name: nr_mmse_eq
+        image: ${DOCKER_REGISTRY:-docker.io/your-username}/nr_mmse_eq:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8014
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8014"
+        - name: OAI_LIB_PATH
+          value: "/usr/local/lib/liboai_functions.so"
+        resources:
+          requests:
+            memory: "384Mi"
+            cpu: "250m"
+          limits:
+            memory: "768Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8014
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8014
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

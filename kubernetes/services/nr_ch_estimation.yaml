@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nr_ch_estimation
+  namespace: oai-functions
+  labels:
+    app: nr_ch_estimation
+    component: oai-function
+spec:
+  type: ClusterIP
+  selector:
+    app: nr_ch_estimation
+  ports:
+  - port: 80
+    targetPort: 8009
+    protocol: TCP
+    name: http

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nr_layer_demapping_test
+  namespace: oai-functions
+  labels:
+    app: nr_layer_demapping_test
+    component: oai-function
+spec:
+  type: ClusterIP
+  selector:
+    app: nr_layer_demapping_test
+  ports:
+  - port: 80
+    targetPort: 8011
+    protocol: TCP
+    name: http

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nr_layermapping
+  namespace: oai-functions
+  labels:
+    app: nr_layermapping
+    component: oai-function
+spec:
+  type: ClusterIP
+  selector:
+    app: nr_layermapping
+  ports:
+  - port: 80
+    targetPort: 8006
+    protocol: TCP
+    name: http

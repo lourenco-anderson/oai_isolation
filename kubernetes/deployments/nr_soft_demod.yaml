@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nr_soft_demod
+  namespace: oai-functions
+  labels:
+    app: nr_soft_demod
+    component: oai-function
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nr_soft_demod
+  template:
+    metadata:
+      labels:
+        app: nr_soft_demod
+        component: oai-function
+    spec:
+      containers:
+      - name: nr_soft_demod
+        image: ${DOCKER_REGISTRY:-docker.io/your-username}/nr_soft_demod:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8013
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8013"
+        - name: OAI_LIB_PATH
+          value: "/usr/local/lib/liboai_functions.so"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8013
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8013
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

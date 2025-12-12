@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nr_scramble
+  namespace: oai-functions
+  labels:
+    app: nr_scramble
+    component: oai-function
+spec:
+  type: ClusterIP
+  selector:
+    app: nr_scramble
+  ports:
+  - port: 80
+    targetPort: 8001
+    protocol: TCP
+    name: http

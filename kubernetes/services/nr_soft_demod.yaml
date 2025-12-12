@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nr_soft_demod
+  namespace: oai-functions
+  labels:
+    app: nr_soft_demod
+    component: oai-function
+spec:
+  type: ClusterIP
+  selector:
+    app: nr_soft_demod
+  ports:
+  - port: 80
+    targetPort: 8013
+    protocol: TCP
+    name: http

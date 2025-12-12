@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nr_crc
+  namespace: oai-functions
+  labels:
+    app: nr_crc
+    component: oai-function
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nr_crc
+  template:
+    metadata:
+      labels:
+        app: nr_crc
+        component: oai-function
+    spec:
+      containers:
+      - name: nr_crc
+        image: ${DOCKER_REGISTRY:-docker.io/your-username}/nr_crc:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8002
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8002"
+        - name: OAI_LIB_PATH
+          value: "/usr/local/lib/liboai_functions.so"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

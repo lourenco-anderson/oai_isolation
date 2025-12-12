@@ -1,0 +1,119 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oai-functions-ingress
+  namespace: oai-functions
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: oai-functions.local
+    http:
+      paths:
+  - path: /scramble
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_scramble
+        port:
+          number: 80
+  - path: /crc
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_crc
+        port:
+          number: 80
+  - path: /ofdm_modulation
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_ofdm_modulation
+        port:
+          number: 80
+  - path: /precoding
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_precoding
+        port:
+          number: 80
+  - path: /modulation_test
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_modulation_test
+        port:
+          number: 80
+  - path: /layermapping
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_layermapping
+        port:
+          number: 80
+  - path: /ldpc
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_ldpc
+        port:
+          number: 80
+  - path: /ofdm_demo
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_ofdm_demo
+        port:
+          number: 80
+  - path: /ch_estimation
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_ch_estimation
+        port:
+          number: 80
+  - path: /descrambling
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_descrambling
+        port:
+          number: 80
+  - path: /layer_demapping_test
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_layer_demapping_test
+        port:
+          number: 80
+  - path: /crc_check
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_crc_check
+        port:
+          number: 80
+  - path: /soft_demod
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_soft_demod
+        port:
+          number: 80
+  - path: /mmse_eq
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_mmse_eq
+        port:
+          number: 80
+  - path: /ldpc_dec
+    pathType: Prefix
+    backend:
+      service:
+        name: nr_ldpc_dec
+        port:
+          number: 80

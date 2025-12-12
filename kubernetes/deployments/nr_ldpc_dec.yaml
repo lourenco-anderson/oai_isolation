@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nr_ldpc_dec
+  namespace: oai-functions
+  labels:
+    app: nr_ldpc_dec
+    component: oai-function
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nr_ldpc_dec
+  template:
+    metadata:
+      labels:
+        app: nr_ldpc_dec
+        component: oai-function
+    spec:
+      containers:
+      - name: nr_ldpc_dec
+        image: ${DOCKER_REGISTRY:-docker.io/your-username}/nr_ldpc_dec:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8015
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8015"
+        - name: OAI_LIB_PATH
+          value: "/usr/local/lib/liboai_functions.so"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1024Mi"
+            cpu: "600m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8015
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8015
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

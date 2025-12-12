@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  nr_scramble:
+    build:
+      context: .
+      dockerfile: containers/services/nr_scramble/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - OAI_LIB_PATH=/usr/local/lib/liboai_functions.so
+
+  nr_crc:
+    build:
+      context: .
+      dockerfile: containers/services/nr_crc/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+
+  nr_ofdm_modulation:
+    build:
+      context: .
+      dockerfile: containers/services/nr_ofdm_modulation/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+
+  nr_precoding:
+    build:
+      context: .
+      dockerfile: containers/services/nr_precoding/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+
+  nr_modulation_test:
+    build:
+      context: .
+      dockerfile: containers/services/nr_modulation_test/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - PORT=8005
+
+  nr_layermapping:
+    build:
+      context: .
+      dockerfile: containers/services/nr_layermapping/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      - PORT=8006
+
+  nr_ldpc:
+    build:
+      context: .
+      dockerfile: containers/services/nr_ldpc/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - PORT=8007
+
+  nr_ofdm_demo:
+    build:
+      context: .
+      dockerfile: containers/services/nr_ofdm_demo/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - PORT=8008
+
+  nr_ch_estimation:
+    build:
+      context: .
+      dockerfile: containers/services/nr_ch_estimation/Dockerfile
+    ports:
+      - "8009:8009"
+    environment:
+      - PORT=8009
+
+  nr_descrambling:
+    build:
+      context: .
+      dockerfile: containers/services/nr_descrambling/Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - PORT=8010
+
+  nr_layer_demapping_test:
+    build:
+      context: .
+      dockerfile: containers/services/nr_layer_demapping_test/Dockerfile
+    ports:
+      - "8011:8011"
+    environment:
+      - PORT=8011
+
+  nr_crc_check:
+    build:
+      context: .
+      dockerfile: containers/services/nr_crc_check/Dockerfile
+    ports:
+      - "8012:8012"
+    environment:
+      - PORT=8012
+
+  nr_soft_demod:
+    build:
+      context: .
+      dockerfile: containers/services/nr_soft_demod/Dockerfile
+    ports:
+      - "8013:8013"
+    environment:
+      - PORT=8013
+
+  nr_mmse_eq:
+    build:
+      context: .
+      dockerfile: containers/services/nr_mmse_eq/Dockerfile
+    ports:
+      - "8014:8014"
+    environment:
+      - PORT=8014
+
+  nr_ldpc_dec:
+    build:
+      context: .
+      dockerfile: containers/services/nr_ldpc_dec/Dockerfile
+    ports:
+      - "8015:8015"
+    environment:
+      - PORT=8015
+
+networks:
+  default:
+    name: oai-functions-network

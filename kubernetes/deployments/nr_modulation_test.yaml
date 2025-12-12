@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nr_modulation_test
+  namespace: oai-functions
+  labels:
+    app: nr_modulation_test
+    component: oai-function
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nr_modulation_test
+  template:
+    metadata:
+      labels:
+        app: nr_modulation_test
+        component: oai-function
+    spec:
+      containers:
+      - name: nr_modulation_test
+        image: ${DOCKER_REGISTRY:-docker.io/your-username}/nr_modulation_test:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8005
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8005"
+        - name: OAI_LIB_PATH
+          value: "/usr/local/lib/liboai_functions.so"
+        resources:
+          requests:
+            memory: "192Mi"
+            cpu: "150m"
+          limits:
+            memory: "384Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8005
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
