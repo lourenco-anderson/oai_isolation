@@ -62,20 +62,20 @@ help:
 
 kind-create:
 	@echo "$(YELLOW)Criando cluster Kind: $(CLUSTER_NAME)$(NC)"
-	./kind-setup.sh create
+	./scripts/kind-setup.sh create
 	@echo "$(GREEN)✓ Cluster criado$(NC)"
 
 kind-delete:
 	@echo "$(YELLOW)Deletando cluster Kind: $(CLUSTER_NAME)$(NC)"
-	./kind-setup.sh delete
+	./scripts/kind-setup.sh delete
 	@echo "$(GREEN)✓ Cluster deletado$(NC)"
 
 kind-status:
-	@./kind-setup.sh status
+	@./scripts/kind-setup.sh status
 
 build:
 	@echo "$(YELLOW)Building images with REGISTRY=$(REGISTRY) TAG=$(TAG)$(NC)"
-	./build-images.sh $(REGISTRY) $(TAG)
+	./scripts/build-images.sh $(REGISTRY) $(TAG)
 
 build-gnb:
 	@echo "$(YELLOW)Building GNB images$(NC)"
@@ -102,7 +102,7 @@ build-ue:
 
 deploy:
 	@echo "$(YELLOW)Deploying to Kubernetes (NAMESPACE=$(NAMESPACE))$(NC)"
-	./deploy.sh $(NAMESPACE) $(REGISTRY)
+	./scripts/deploy.sh $(NAMESPACE) $(REGISTRY)
 	@echo "$(GREEN)✓ Deployment completed$(NC)"
 
 undeploy:
@@ -149,7 +149,7 @@ push-images:
 
 validate-manifests:
 	@echo "$(YELLOW)Validating Kubernetes manifests$(NC)"
-	@kubectl apply -f . --dry-run=client
+	@kubectl apply -f manifests/ --dry-run=client
 	@echo "$(GREEN)✓ All manifests are valid$(NC)"
 
 describe-resources:
@@ -160,14 +160,14 @@ describe-resources:
 
 install-monitoring:
 	@echo "$(YELLOW)Installing Kepler + Prometheus + Grafana$(NC)"
-	./install-monitoring-stack.sh
+	./scripts/install-monitoring-stack.sh
 
 energy-queries:
 	@echo "$(YELLOW)Running energy queries...$(NC)"
-	./energy-queries.sh --all
+	./scripts/energy-queries.sh --all
 
 energy-interactive:
-	@./energy-queries.sh
+	@./scripts/energy-queries.sh
 
 port-forward-all:
 	@echo "$(YELLOW)Starting port forwards...$(NC)"
@@ -211,13 +211,16 @@ energy-top:
 # ============= DOCUMENTATION =============
 
 docs:
-	@echo "$(BLUE)OAI Isolation Documentation:$(NC)"
+	@echo "$(BLUE)OAI Isolation Documentation (em docs/):$(NC)"
 	@echo ""
-	@echo "README.md                - Main guide and quickstart"
-	@echo "ARCHITECTURE.md          - Detailed architecture"
-	@echo "KEPLER_MONITORING.md     - Energy monitoring setup"
-	@echo "TROUBLESHOOTING.md       - Common problems and solutions"
-	@echo "SUMÁRIO.md              - Executive summary (Portuguese)"
+	@echo "docs/README.md                - Index de documentação"
+	@echo "docs/COMPONENTS.md            - Tabela central (7 gNB + 8 UE)"
+	@echo "docs/DEPLOYMENT_K8S.md        - Guia K8s"
+	@echo "docs/ARCHITECTURE.md          - Arquitetura detalhada"
+	@echo "docs/MONITORING_KEPLER.md     - Setup Kepler+Prometheus+Grafana"
+	@echo "docs/TROUBLESHOOTING.md       - Problemas e soluções"
+	@echo ""
+	@echo "Ver: cat docs/README.md"
 	@echo ""
 
 .DEFAULT_GOAL := help

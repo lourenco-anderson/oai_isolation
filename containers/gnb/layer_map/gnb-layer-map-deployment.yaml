@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-layer-map
+  namespace: oai-isolation
+  labels:
+    app: gnb-layer-map
+    component: gnb
+    function: layer-map
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: gnb-layer-map
+  template:
+    metadata:
+      labels:
+        app: gnb-layer-map
+        component: gnb
+        function: layer-map
+    spec:
+      containers:
+      - name: gnb-layer-map
+        image: oai-isolation:gnb-layer-map
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        env:
+        - name: LOG_LEVEL
+          value: "INFO"
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-layer-map
+  namespace: oai-isolation
+  labels:
+    app: gnb-layer-map
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 8081
+    targetPort: 8081
+    name: http
+  selector:
+    app: gnb-layer-map

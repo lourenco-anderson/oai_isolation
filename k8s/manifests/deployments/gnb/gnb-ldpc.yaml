@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gnb-crc
+  name: gnb-ldpc
   namespace: oai-isolation
   labels:
-    app: gnb-crc
+    app: gnb-ldpc
     component: gnb
-    function: crc
+    function: ldpc
 spec:
   replicas: 1
   strategy:
@@ -16,54 +16,46 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: gnb-crc
+      app: gnb-ldpc
   template:
     metadata:
       labels:
-        app: gnb-crc
+        app: gnb-ldpc
         component: gnb
-        function: crc
+        function: ldpc
     spec:
       containers:
-      - name: gnb-crc
-        image: oai-isolation:gnb-crc
+      - name: gnb-ldpc
+        image: oai-isolation:gnb-ldpc
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
             memory: "512Mi"
             cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
         env:
         - name: LOG_LEVEL
           value: "INFO"
-        volumeMounts:
-        - name: shared-lib
-          mountPath: /usr/lib/shared
-          readOnly: true
         securityContext:
           runAsNonRoot: false
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
-      volumes:
-      - name: shared-lib
-        emptyDir: {}
       restartPolicy: Always
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: gnb-crc
+  name: gnb-ldpc
   namespace: oai-isolation
   labels:
-    app: gnb-crc
+    app: gnb-ldpc
 spec:
   type: ClusterIP
   ports:
   - protocol: TCP
-    port: 8080
-    targetPort: 8080
+    port: 8082
+    targetPort: 8082
     name: http
   selector:
-    app: gnb-crc
+    app: gnb-ldpc
