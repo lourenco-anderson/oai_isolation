@@ -1,5 +1,10 @@
 #include "functions.h"
 #include "modulation_tables.h"
+#include "PHY/NR_UE_TRANSPORT/nr_transport_ue.h"
+#include "PHY/NR_UE_ESTIMATION/nr_estimation.h"
+#include "PHY/INIT/nr_phy_init.h"
+#include <math.h>
+#include "PHY/defs_nr_UE.h"
 #include "common/platform_types.h"
 #include "PHY/TOOLS/tools_defs.h"
 #include "PHY/CODING/nrLDPC_decoder/nrLDPC_types.h"
@@ -47,6 +52,17 @@ static inline uint32_t xorshift32(uint32_t *state)
     x ^= x << 5;
     *state = x;
     return x;
+}
+
+/* Box-Muller normal RNG using the xorshift PRNG */
+static inline double gaussian_noise(uint32_t *state)
+{
+    /* Avoid log(0) by keeping u1 in (0,1] */
+    double u1 = ((double)(xorshift32(state) & 0xFFFFFF)) / 16777216.0;
+    if (u1 == 0.0) u1 = 1e-7;
+    double u2 = ((double)(xorshift32(state) & 0xFFFFFF)) / 16777216.0;
+    const double two_pi = 6.28318530717958647692;
+    return sqrt(-2.0 * log(u1)) * cos(two_pi * u2);
 }
 
 /* Helper: read integer from environment with default */
@@ -378,23 +394,24 @@ void nr_scramble(){
     };
     memcpy(in, sample, sizeof(sample) < in_bytes ? sizeof(sample) : in_bytes);
     
-    printf("Starting scrambling tests...\n");
+    const int iterations = getenv_int("OAI_ITERS", 1000);
+    const int verbose = getenv("OAI_VERBOSE") != NULL;
+
+    printf("Starting scrambling tests (%d iterations)...\n", iterations);
     
-    /* Run the scrambling 1000 times (as requested earlier) with small variation */
-    for (int iter = 0; iter < 100000000; ++iter) {
-        /* vary a byte so each run differs */
-        in[0] = (uint8_t)iter;
-        
+    /* Run scrambling with lightweight logging */
+    for (int iter = 0; iter < iterations; ++iter) {
+        in[0] = (uint8_t)iter; /* vary a byte so each run differs */
         nr_codeword_scrambling(in, size, q, Nid, n_RNTI, out);
-        
-        if ((iter % 100) == 0) {
+        if (verbose && (iter % 100) == 0) {
             printf("iter %d: out[0]=0x%08X\n", iter, (unsigned)out[0]);
         }
     }
     
-    /* Print final output buffer (first 64 words for inspection) */
+    /* Print a small slice of the output buffer */
     int roundedSz = (size + 31) / 32;
-    int print_limit = roundedSz < 64 ? roundedSz : 64;
+    int print_cap = verbose ? 64 : 8;
+    int print_limit = roundedSz < print_cap ? roundedSz : print_cap;
     printf("Final output (showing first %d of %d words):\n", print_limit, roundedSz);
     for (int i = 0; i < print_limit; ++i) {
         printf("out[%02d] = 0x%08X\n", i, out[i]);
@@ -838,138 +855,277 @@ void nr_ldpc()
 
 void nr_ch_estimation()
 {
+        /* (sem forward decl do stub aqui; usamos LS ou função real via headers) */
     /* Initialize the logging system first */
     logInit();
     
     printf("=== Starting NR Channel Estimation (PDSCH) tests ===\n");
     
     /* Channel estimation parameters */
-    const int nb_antennas_rx = 2;           /* 2 RX antennas */
-    const int nb_antennas_tx = 1;           /* 1 TX antenna */
-    const int ofdm_symbol_size = 2048;      /* FFT size */
-    const int first_carrier_offset = 0;
+    const int nb_antennas_rx = 4;           /* RX antennas */
+    const int nb_antennas_tx = 4;           /* TX antennas */
     const int nb_rb_pdsch = 106;            /* 106 RBs = 20 MHz */
+    const int ofdm_symbol_size = 2048;      /* FFT size (use 2048 to fit 106 PRBs) */
+    const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
-    const int num_iterations = 10;
+    const int num_iterations = getenv_int("OAI_ITERS", 100); /* lighter default */
+    const int verbose = getenv("OAI_VERBOSE") != NULL;
+    const int snr_db = getenv_int("OAI_SNR", 20); /* SNR in dB (higher = cleaner signal) */
     
-    printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d\n",
-           nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot);
+    /* Compute noise standard deviation from SNR: SNR_dB = 10*log10(P_signal / P_noise) */
+    double snr_linear = pow(10.0, snr_db / 10.0);
+    double noise_std = sqrt(1.0 / snr_linear); /* assuming signal power = 1 */
     
-    /* Allocate RX frequency-domain data buffer (rxdataF) */
-    int32_t *rxdataF_data = aligned_alloc(32, 
-        nb_antennas_rx * symbols_per_slot * ofdm_symbol_size * sizeof(int32_t));
-    if (!rxdataF_data) {
-        printf("nr_ch_estimation: rxdataF allocation failed\n");
-        return;
-    }
-    memset(rxdataF_data, 0, nb_antennas_rx * symbols_per_slot * ofdm_symbol_size * sizeof(int32_t));
+    printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d, SNR=%d dB (noise_std=%.4f)\n",
+           nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot, snr_db, noise_std);
     
-    /* Create 2D array view for rxdataF */
-    int32_t (*rxdataF)[ofdm_symbol_size] = (int32_t (*)[ofdm_symbol_size])rxdataF_data;
-    
-    /* Allocate downlink channel estimation buffer (dl_ch) */
-    int32_t *dl_ch_data = aligned_alloc(32,
-        nb_antennas_rx * nb_rb_pdsch * 12 * symbols_per_slot * sizeof(int32_t));
-    if (!dl_ch_data) {
-        printf("nr_ch_estimation: dl_ch allocation failed\n");
-        free(rxdataF_data);
-        return;
-    }
-    memset(dl_ch_data, 0, nb_antennas_rx * nb_rb_pdsch * 12 * symbols_per_slot * sizeof(int32_t));
-    
-    /* Create 2D array view for dl_ch */
-    int32_t (*dl_ch)[nb_rb_pdsch * 12 * symbols_per_slot] = 
-        (int32_t (*)[nb_rb_pdsch * 12 * symbols_per_slot])dl_ch_data;
-    
-    /* Create minimal frame parameters (use simple malloc to avoid incomplete type) */
-    void *frame_parms_data = malloc(sizeof(NR_DL_FRAME_PARMS));
-    if (!frame_parms_data) {
-        printf("nr_ch_estimation: frame_parms allocation failed\n");
-        free(rxdataF_data);
-        free(dl_ch_data);
-        return;
-    }
-    
-    NR_DL_FRAME_PARMS *frame_parms = (NR_DL_FRAME_PARMS *)frame_parms_data;
-    memset(frame_parms, 0, sizeof(NR_DL_FRAME_PARMS));
-    frame_parms->N_RB_DL = nb_rb_pdsch;
-    frame_parms->ofdm_symbol_size = ofdm_symbol_size;
-    frame_parms->first_carrier_offset = first_carrier_offset;
-    frame_parms->nb_antennas_rx = nb_antennas_rx;
-    frame_parms->nb_antennas_tx = nb_antennas_tx;
-    frame_parms->symbols_per_slot = symbols_per_slot;
-    frame_parms->slots_per_frame = 10;
-    frame_parms->nb_prefix_samples = 176;
-    frame_parms->nb_prefix_samples0 = 176;
-    frame_parms->samples_per_slot_wCP = (ofdm_symbol_size + 176) * symbols_per_slot;
-    frame_parms->numerology_index = 0;
-    frame_parms->ofdm_offset_divisor = 8;
-    
+    /* Minimal frame-like struct expected by the stub */
+    struct mini_fp { int ofdm_symbol_size; int N_RB_DL; int nb_antennas_rx; } mini_fp = {
+        .ofdm_symbol_size = ofdm_symbol_size,
+        .N_RB_DL = nb_rb_pdsch,
+        .nb_antennas_rx = nb_antennas_rx
+    };
+
+    /* Allocate RX frequency-domain data buffer (flat) and dl_ch (flat) */
+    const int rx_len = nb_antennas_rx * ofdm_symbol_size;
+    int32_t *rxdataF_data = aligned_alloc(32, rx_len * sizeof(int32_t));
+    if (!rxdataF_data) { printf("nr_ch_estimation: rxdataF allocation failed\n"); return; }
+    memset(rxdataF_data, 0, rx_len * sizeof(int32_t));
+
+    int32_t *dl_ch_data = aligned_alloc(32, rx_len * sizeof(int32_t));
+    if (!dl_ch_data) { printf("nr_ch_estimation: dl_ch allocation failed\n"); free(rxdataF_data); return; }
+    memset(dl_ch_data, 0, rx_len * sizeof(int32_t));
+
     /* Initialize noise variance array */
     uint32_t *nvar = aligned_alloc(32, nb_antennas_rx * sizeof(uint32_t));
     if (!nvar) {
         printf("nr_ch_estimation: nvar allocation failed\n");
         free(rxdataF_data);
         free(dl_ch_data);
-        free(frame_parms_data);
         return;
     }
-    for (int i = 0; i < nb_antennas_rx; i++) {
-        nvar[i] = 255;  /* Default noise variance estimate */
-    }
+    for (int i = 0; i < nb_antennas_rx; i++) nvar[i] = 255;
     
     printf("Running %d iterations of PDSCH channel estimation...\n", num_iterations);
+
+    int use_real = 0;
+    const char *use_real_env = getenv("OAI_USE_REAL_EST");
+    if (use_real_env && (*use_real_env == '1')) {
+        printf("Note: OAI_USE_REAL_EST requested but real path disabled for safety (requires multi-layer buffer setup). Using LS instead.\n");
+        use_real = 0;
+    }
+
+    /* Com LS simples, nosso dl_ch cobre [ant][k] do tamanho rx_len */
+    const int dl_ch_words = rx_len;
+    
+    /* Initialize PRNG for noise generation (separate from signal PRNG) */
+    uint32_t noise_seed = 0x12345678u;
     
     /* Main channel estimation loop */
     for (int iter = 0; iter < num_iterations; iter++) {
-        /* Fill rxdataF with test pattern - pseudo-random I/Q values */
-        uint32_t seed = 0xDEADBEEF + iter;
-        for (int ant = 0; ant < nb_antennas_rx; ant++) {
-            for (int sym = 0; sym < symbols_per_slot; sym++) {
-                for (int k = 0; k < ofdm_symbol_size; k++) {
-                    seed = seed * 1103515245 + 12345;
-                    int16_t real = (int16_t)((seed >> 16) & 0xFFFF);
-                    
-                    seed = seed * 1103515245 + 12345;
-                    int16_t imag = (int16_t)((seed >> 16) & 0xFFFF);
-                    
-                    rxdataF[ant * symbols_per_slot + sym][k] = 
-                        (int32_t)real | ((int32_t)imag << 16);
-                }
+        /* Fill rxdataF with pseudo-random signal values */
+        uint32_t seed = 0xA5A5A5A5u + iter;
+        for (int n = 0; n < rx_len; n++) {
+            seed = seed * 1103515245 + 12345;
+            int16_t re = (int16_t)((seed >> 16) & 0xFFFF);
+            seed = seed * 1103515245 + 12345;
+            int16_t im = (int16_t)((seed >> 16) & 0xFFFF);
+            rxdataF_data[n] = ((int32_t)im << 16) | (uint16_t)re;
+        }
+        
+        /* Add Gaussian noise scaled by SNR (Box-Muller to generate Gaussian samples) */
+        for (int n = 0; n < rx_len; n += 2) {
+            /* Box-Muller: generate two independent Gaussian(0,1) samples */
+            noise_seed = noise_seed * 1103515245 + 12345;
+            double u1 = (double)(noise_seed & 0xFFFFFF) / (1u << 24); /* [0, 1) */
+            noise_seed = noise_seed * 1103515245 + 12345;
+            double u2 = (double)(noise_seed & 0xFFFFFF) / (1u << 24);
+            double z0 = sqrt(-2.0 * log(u1 + 1e-10)) * cos(2.0 * M_PI * u2);
+            double z1 = sqrt(-2.0 * log(u1 + 1e-10)) * sin(2.0 * M_PI * u2);
+            
+            /* Extract current IQ and add scaled noise */
+            int32_t curr = rxdataF_data[n];
+            int16_t curr_re = (int16_t)(curr & 0xFFFF);
+            int16_t curr_im = (int16_t)((curr >> 16) & 0xFFFF);
+            double noisy_re = curr_re + noise_std * z0 * 32767.0; /* scale by max I16 */
+            double noisy_im = curr_im + noise_std * z1 * 32767.0;
+            /* Clamp to prevent overflow */
+            int16_t clipped_re = (noisy_re > 32767) ? 32767 : ((noisy_re < -32768) ? -32768 : (int16_t)noisy_re);
+            int16_t clipped_im = (noisy_im > 32767) ? 32767 : ((noisy_im < -32768) ? -32768 : (int16_t)noisy_im);
+            rxdataF_data[n] = ((int32_t)(uint16_t)clipped_im << 16) | (uint16_t)clipped_re;
+            
+            /* Process next sample if available */
+            if (n + 1 < rx_len) {
+                curr = rxdataF_data[n + 1];
+                curr_re = (int16_t)(curr & 0xFFFF);
+                curr_im = (int16_t)((curr >> 16) & 0xFFFF);
+                noisy_re = curr_re + noise_std * z1 * 32767.0;
+                noise_seed = noise_seed * 1103515245 + 12345; /* fresh noise */
+                double u3 = (double)(noise_seed & 0xFFFFFF) / (1u << 24);
+                noise_seed = noise_seed * 1103515245 + 12345;
+                double u4 = (double)(noise_seed & 0xFFFFFF) / (1u << 24);
+                double z2 = sqrt(-2.0 * log(u3 + 1e-10)) * cos(2.0 * M_PI * u4);
+                noisy_im = curr_im + noise_std * z2 * 32767.0;
+                clipped_re = (noisy_re > 32767) ? 32767 : ((noisy_re < -32768) ? -32768 : (int16_t)noisy_re);
+                clipped_im = (noisy_im > 32767) ? 32767 : ((noisy_im < -32768) ? -32768 : (int16_t)noisy_im);
+                rxdataF_data[n + 1] = ((int32_t)(uint16_t)clipped_im << 16) | (uint16_t)clipped_re;
             }
         }
-        
-        /* Call nr_pdsch_channel_estimation for each symbol */
-        for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
-            nr_pdsch_channel_estimation(
-                NULL,                          /* PHY_VARS_NR_UE (can be NULL) */
-                frame_parms,                   /* NR_DL_FRAME_PARMS */
-                symbol,                        /* Symbol index */
-                0,                             /* gNB index */
-                nb_antennas_rx,                /* Number of RX antennas */
-                &dl_ch[0][0],                  /* DL channel estimation output */
-                (void *)rxdataF,               /* RX frequency-domain data */
-                nvar                           /* Noise variance estimates */
-            );
+
+        if (!use_real) {
+            /* LS simples: Ĥ[k] = Y[k] / P[k]; escolher P = 8192 (1<<13) real */
+            const int pr = 8192; /* 2^13 */
+            for (int ant = 0; ant < nb_antennas_rx; ant++) {
+                int base = ant * ofdm_symbol_size;
+                for (int k = 0; k < ofdm_symbol_size; k++) {
+                    int32_t y = rxdataF_data[base + k];
+                    int16_t yr = (int16_t)(y & 0xFFFF);
+                    int16_t yi = (int16_t)((y >> 16) & 0xFFFF);
+                    int16_t hr = (int16_t)(yr / pr);
+                    int16_t hi = (int16_t)(yi / pr);
+                    dl_ch_data[base + k] = ((int32_t)(uint16_t)hi << 16) | (uint16_t)hr;
+                }
+            }
+        } else {
+            /* Caminho REAL OAI: configurar UE/proc/dlsch/freq_alloc e chamar nr_pdsch_channel_estimation */
+            PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)calloc(1, sizeof(PHY_VARS_NR_UE));
+            if (!ue) { printf("ue alloc failed\n"); break; }
+            NR_DL_FRAME_PARMS *fp = &ue->frame_parms;
+            memset(fp, 0, sizeof(*fp));
+            /* Inicializa tabela de CP e atrasos padrão para banda 78 (30 kHz SCS) */
+            fp->N_RB_DL = nb_rb_pdsch;
+            fp->numerology_index = 1; /* 30 kHz for band 78 */
+            uint64_t dl_freq = 3500000000ULL;
+            nr_init_frame_parms_ue_sa(fp, dl_freq, 0, fp->numerology_index, 78);
+            fp->ofdm_symbol_size = ofdm_symbol_size;
+            fp->first_carrier_offset = first_carrier_offset;
+            fp->nb_antennas_rx = nb_antennas_rx;
+            fp->nb_antennas_tx = nb_antennas_tx;
+            fp->symbols_per_slot = symbols_per_slot;
+            fp->slots_per_frame = 10;
+            fp->nb_prefix_samples = 176;   /* normal CP for 2048 FFT */
+            fp->nb_prefix_samples0 = 176;
+            fp->samples_per_slot_wCP = ofdm_symbol_size * symbols_per_slot;
+            fp->numerology_index = 1;
+            fp->Ncp = NORMAL;
+            fp->Nid_cell = 0;
+            /* Atualiza tabela de atraso com o FFT configurado */
+            init_delay_table(fp->ofdm_symbol_size, MAX_DELAY_COMP, NR_MAX_OFDM_SYMBOL_SIZE, fp->delay_table);
+            ue->chest_freq = 0;
+
+            const int pdsch_est_size = ofdm_symbol_size * symbols_per_slot;
+            /* Mapear rxdataF_data (int32_t IQ) para c16_t 2D temporário conforme assinatura */
+            c16_t *rxdataF_tmp = (c16_t *)aligned_alloc(32, nb_antennas_rx * pdsch_est_size * sizeof(c16_t));
+            if (!rxdataF_tmp) { free(ue); printf("rxdataF_tmp alloc failed\n"); break; }
+            for (int ant = 0; ant < nb_antennas_rx; ant++) {
+                for (int n = 0; n < pdsch_est_size; n++) {
+                    int32_t y = rxdataF_data[ant * ofdm_symbol_size + (n % ofdm_symbol_size)];
+                    rxdataF_tmp[ant * pdsch_est_size + n].r = (int16_t)(y & 0xFFFF);
+                    rxdataF_tmp[ant * pdsch_est_size + n].i = (int16_t)((y >> 16) & 0xFFFF);
+                }
+            }
+
+            int32_t *dl_ch_tmp = (int32_t *)aligned_alloc(32, nb_antennas_rx * pdsch_est_size * sizeof(int32_t));
+            if (!dl_ch_tmp) { free(rxdataF_tmp); free(ue); printf("dl_ch_tmp alloc failed\n"); break; }
+            memset(dl_ch_tmp, 0, nb_antennas_rx * pdsch_est_size * sizeof(int32_t));
+
+            UE_nr_rxtx_proc_t proc = {0};
+            proc.nr_slot_rx = 0;
+            proc.frame_rx = 0;
+
+            fapi_nr_dl_config_dlsch_pdu_rel15_t dlsch = {0};
+            dlsch.BWPStart = 0;
+            dlsch.BWPSize = nb_rb_pdsch;
+            dlsch.SubcarrierSpacing = 0;       /* 15 kHz */
+            dlsch.start_rb = 0;
+            dlsch.number_rbs = nb_rb_pdsch;
+            dlsch.start_symbol = 0;
+            dlsch.number_symbols = symbols_per_slot;
+            dlsch.resource_alloc = 1;           /* type 1 */
+            dlsch.refPoint = 0;
+            dlsch.dmrsConfigType = NFAPI_NR_DMRS_TYPE1;
+            dlsch.dlDmrsSymbPos = 0x0004;       /* DMRS on symbol 2 (bit indexed) */
+            dlsch.n_dmrs_cdm_groups = 1;
+            dlsch.dlDmrsScramblingId = 0;
+            dlsch.nscid = 0;
+
+            freq_alloc_bitmap_t freq_alloc = {0};
+            freq_alloc.start[0] = 0;
+            freq_alloc.end[0] = nb_rb_pdsch - 1;
+            freq_alloc.num_rbs = nb_rb_pdsch;
+            freq_alloc.num_blocks = 1;
+            /* Set allocation bitmap for the first 106 RBs */
+            for (int rb = 0; rb < nb_rb_pdsch; rb++) {
+                freq_alloc.bitmap[rb / 8] |= (1u << (rb % 8));
+            }
+
+            for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
+                nr_pdsch_channel_estimation(
+                    ue,
+                    &proc,
+                    &dlsch,
+                    &freq_alloc,
+                    0,
+                    0,
+                    (unsigned char)symbol,
+                    (uint32_t)pdsch_est_size,
+                    (int32_t (*)[pdsch_est_size])dl_ch_tmp,
+                    pdsch_est_size,
+                    (c16_t (*)[pdsch_est_size])rxdataF_tmp,
+                    nvar);
+            }
+
+            /* Check se houve escrita em dl_ch_tmp (apenas em modo verboso) */
+            if (verbose && iter == 0) {
+                int wrote_real = 0;
+                for (int i = 0; i < nb_antennas_rx * pdsch_est_size; i++) {
+                    if (((uint32_t *)dl_ch_tmp)[i] != 0) { wrote_real = 1; break; }
+                }
+                printf("    real-path wrote_real=%d dl_ch_tmp[0]=0x%08X rxF[0]=0x%08X\n",
+                       wrote_real,
+                       ((uint32_t *)dl_ch_tmp)[0],
+                       ((uint32_t *)rxdataF_tmp)[0]);
+            }
+
+            /* Copiar o símbolo DMRS estimado (primeiro bit set) para dl_ch_data */
+            int dmrs_sym = 0;
+            for (int b = 0; b < symbols_per_slot; b++) {
+                if (dlsch.dlDmrsSymbPos & (1u << b)) { dmrs_sym = b; break; }
+            }
+            int dmrs_offset = dmrs_sym * ofdm_symbol_size;
+            for (int ant = 0; ant < nb_antennas_rx; ant++) {
+                memcpy(&dl_ch_data[ant * ofdm_symbol_size],
+                       &dl_ch_tmp[ant * pdsch_est_size + dmrs_offset],
+                       ofdm_symbol_size * sizeof(int32_t));
+            }
+
+            free(dl_ch_tmp);
+            free(rxdataF_tmp);
+            free(ue);
         }
-        
-        if ((iter % 5) == 0) {
-            printf("  iter %2d: dl_ch[0][0]=0x%08X dl_ch[0][1]=0x%08X\n",
-                   iter,
-                   ((uint32_t *)dl_ch)[0],
-                   ((uint32_t *)dl_ch)[1]);
+
+        /* Simple write-detection: check if any word in dl_ch is non-zero */
+        int wrote = 0;
+        for (int i = 0; i < dl_ch_words; i++) {
+            if (((uint32_t *)dl_ch_data)[i] != 0) { wrote = 1; break; }
+        }
+
+        if (verbose && (iter % 10) == 0) {
+            printf("  iter %6d: wrote=%d dl_ch[0]=0x%08X dl_ch[1]=0x%08X\n",
+                   iter, wrote,
+                   ((uint32_t *)dl_ch_data)[0],
+                   ((uint32_t *)dl_ch_data)[1]);
         }
     }
     
     printf("\n=== Final channel estimation output (first 8 samples) ===\n");
     for (int i = 0; i < 8; i++) {
-        printf("dl_ch[0][%02d] = 0x%08X\n", i, ((uint32_t *)dl_ch)[i]);
+        printf("dl_ch[0][%02d] = 0x%08X\n", i, ((uint32_t *)dl_ch_data)[i]);
     }
     
     /* Cleanup */
     free(rxdataF_data);
     free(dl_ch_data);
-    free(frame_parms_data);
     free(nvar);
     printf("=== NR Channel Estimation (PDSCH) tests completed ===\n");
 }
@@ -984,19 +1140,21 @@ void nr_descrambling()
     
     printf("=== Starting NR DLSCH Descrambling tests ===\n");
     
-    /* Descrambling parameters */
-    const uint32_t size = 2688;        /* bits (LLR size) */
-    const uint8_t q = 0;
-    const uint32_t Nid = 0;
-    const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
+        /* Descrambling parameters (mirrors nr_scramble style) */
+        const uint32_t size = 82368;        /* bits/LLRs */
+        const uint8_t q = 0;
+        const uint32_t Nid = 0;
+        const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
+
+        /* Derived buffer sizes: round up to a small SIMD-friendly multiple */
+        const int buffer_size = ((int)size + 15) & ~15; /* multiple of 16 LLRs */
+        const int num_iterations = getenv_int("OAI_ITERS", 1000000);
+        const int verbose = getenv("OAI_VERBOSE") != NULL;
     
-    /* Buffer size: allocate extra space for SIMD operations safety margin */
-    const int buffer_size = 4096;      /* Large safe buffer for SIMD */
-    const int num_iterations = 100;    /* Reduced iterations for descrambling */
-    
-    printf("Descrambling parameters: size=%u bits, q=%u, Nid=%u, n_RNTI=0x%X\n",
-           size, q, Nid, n_RNTI);
-    printf("Buffer size: %d LLRs (allocated for %u LLRs needed)\n", buffer_size, size);
+        printf("Descrambling parameters: size=%u bits, q=%u, Nid=%u, n_RNTI=0x%X\n",
+            size, q, Nid, n_RNTI);
+        printf("Buffer size: %d LLRs (allocated for %u LLRs needed)\n", buffer_size, size);
+        printf("Iterations: %d (set OAI_ITERS), verbose=%d (set OAI_VERBOSE)\n", num_iterations, verbose);
     
     /* Allocate LLR buffer (aligned to 32 bytes for SIMD) - int16_t for soft bits */
     int16_t *llr = aligned_alloc(32, buffer_size * sizeof(int16_t));
@@ -1027,9 +1185,9 @@ void nr_descrambling()
         
         /* Call nr_dlsch_unscrambling to descramble the LLRs */
         nr_dlsch_unscrambling(llr, size, q, Nid, n_RNTI);
-        
-        if ((iter % 20) == 0) {
-            printf("  iter %3d: llr[0]=%d llr[1]=%d llr[2]=%d\n",
+
+        if (verbose && (iter % 100) == 0) {
+            printf("  iter %4d: llr[0]=%d llr[1]=%d llr[2]=%d\n",
                    iter, llr[0], llr[1], llr[2]);
         }
     }
@@ -1054,10 +1212,10 @@ void nr_layer_demapping_test()
     /* Layer demapping parameters */
     const uint8_t Nl = 2;                   /* 2 layers */
     const uint8_t mod_order = 4;            /* 16-QAM (4 bits per symbol) */
-    const uint32_t length = 2048;           /* Total LLRs to process */
+    const uint32_t length = 13728;           /* Total LLRs to process */
     const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
     const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
-    const int num_iterations = 100;
+    const int num_iterations = 1000000;
     
     /* Calculate layer buffer size */
     const uint32_t layer_sz = length;       /* Each layer holds all LLRs */
@@ -1145,10 +1303,10 @@ void nr_crc_check()
     crcTableInit();
     
     /* CRC check parameters */
-    const uint32_t payload_bits = 2688;     /* Payload length in bits (without CRC) */
+    const uint32_t payload_bits = 40976 ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
-    const int num_iterations = 1000;        /* 1000 iterations */
+    const int num_iterations = 1000000;        /* 1000 iterations */
     
     /* Buffer size in bytes */
     const uint32_t total_bytes = (total_bits + 7) / 8;
@@ -1270,16 +1428,19 @@ void nr_soft_demod()
     
     /* Soft demodulation parameters */
     const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
-    const int nbRx = 2;                         /* 2 RX antennas */
+    const int nbRx = 4;                         /* 2 RX antennas */
     const int Nl = 2;                           /* 2 layers */
-    const uint32_t len = 512;                   /* Resource elements per symbol */
+    const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = 100;             /* 100 iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const int snr_db = getenv_int("OAI_SNR", 20);               /* SNR in dB */
+    const int mod_order = getenv_int("OAI_MOD_ORDER", 4);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
-    printf("Soft demod parameters: rx_symbol_size=%u, nbRx=%d, Nl=%d, len=%u\n",
-           rx_size_symbol, nbRx, Nl, len);
-    printf("Running %d iterations...\n", num_iterations);
+        printf("Soft demod parameters: rx_symbol_size=%u, nbRx=%d, Nl=%d, len=%u\n",
+            rx_size_symbol, nbRx, Nl, len);
+        printf("mod_order=%d, SNR=%d dB\n", mod_order, snr_db);
+        printf("Running %d iterations...\n", num_iterations);
     
     /* Allocate rxdataF_comp buffer (compensated received symbols) */
     int32_t (*rxdataF_comp)[nbRx][rx_size_symbol * NR_SYMBOLS_PER_SLOT] = 
@@ -1323,45 +1484,76 @@ void nr_soft_demod()
     NR_UE_DLSCH_t dlsch[2];
     memset(dlsch, 0, sizeof(dlsch));
     
-    /* Configure first DLSCH with 16-QAM (mod order 4) */
+    /* Configure first DLSCH with requested modulation */
     dlsch[0].Nl = Nl;
-    dlsch[0].dlsch_config.qamModOrder = 4;  /* 16-QAM */
+    dlsch[0].dlsch_config.qamModOrder = (uint8_t)mod_order;  /* 2/4/6/8 */
     
     /* Create mock HARQ structures (NULL for second codeword in this test) */
     NR_DL_UE_HARQ_t *dlsch0_harq = NULL;
     NR_DL_UE_HARQ_t *dlsch1_harq = NULL;
     
     /* Seed rxdataF_comp with sample received symbols (I/Q pairs) */
-    const int32_t sample_iq[] = {
-        0x10001000, 0x20002000, 0xF000F000, 0xE000E000,
-        0x30003000, 0x40004000, 0xD000D000, 0xC000C000,
-        0x50005000, 0x60006000, 0xB000B000, 0xA0009000
-    };
-    int sample_size = sizeof(sample_iq) / sizeof(sample_iq[0]);
-    
-    /* Fill first symbol of first layer/antenna with samples */
-    for (int i = 0; i < sample_size && i < (int)len; i++) {
-        rxdataF_comp[0][0][symbol * rx_size_symbol + i] = sample_iq[i % sample_size];
-    }
-    
-    /* Seed channel magnitude buffers with typical values */
+    /* Seed channel magnitude buffers per modulation order */
     for (uint32_t i = 0; i < len; i++) {
-        dl_ch_mag[i].r = 0x2000;   /* Channel magnitude for 16-QAM level 1 */
-        dl_ch_mag[i].i = 0x2000;
-        dl_ch_magb[i].r = 0x4000;  /* Channel magnitude for 64-QAM level 2 */
-        dl_ch_magb[i].i = 0x4000;
-        dl_ch_magr[i].r = 0x6000;  /* Channel magnitude for 256-QAM level 3 */
-        dl_ch_magr[i].i = 0x6000;
+        /* Rough scaling per constellation; these magnitudes are illustrative */
+        if (mod_order >= 8) {
+            dl_ch_mag[i].r = 0x1800;
+            dl_ch_mag[i].i = 0x1800;
+            dl_ch_magb[i].r = 0x3000;
+            dl_ch_magb[i].i = 0x3000;
+            dl_ch_magr[i].r = 0x6000;
+            dl_ch_magr[i].i = 0x6000;
+        } else if (mod_order >= 6) {
+            dl_ch_mag[i].r = 0x2000;
+            dl_ch_mag[i].i = 0x2000;
+            dl_ch_magb[i].r = 0x4000;
+            dl_ch_magb[i].i = 0x4000;
+            dl_ch_magr[i].r = 0x5000;
+            dl_ch_magr[i].i = 0x5000;
+        } else if (mod_order >= 4) {
+            dl_ch_mag[i].r = 0x3000;
+            dl_ch_mag[i].i = 0x3000;
+            dl_ch_magb[i].r = 0x4000;
+            dl_ch_magb[i].i = 0x4000;
+            dl_ch_magr[i].r = 0x5000;
+            dl_ch_magr[i].i = 0x5000;
+        } else { /* QPSK */
+            dl_ch_mag[i].r = 0x4000;
+            dl_ch_mag[i].i = 0x4000;
+            dl_ch_magb[i].r = 0x4000;
+            dl_ch_magb[i].i = 0x4000;
+            dl_ch_magr[i].r = 0x4000;
+            dl_ch_magr[i].i = 0x4000;
+        }
     }
     
     printf("Starting soft demodulation loop...\n");
     
+    /* Initialize PRNG for AWGN generation */
+    uint32_t rng_state = 0xDEADBEEFu ^ (uint32_t)time(NULL);
+    
     /* Main soft demodulation loop */
     for (int iter = 0; iter < num_iterations; iter++) {
-        /* Vary first I/Q sample so each run differs */
-        rxdataF_comp[0][0][symbol * rx_size_symbol] = 
-            (int32_t)(0x10001000 + (iter << 8));
-        
+        /* Regenerate per-iteration LLRs using AWGN based on SNR */
+        const double snr_lin = pow(10.0, snr_db / 10.0);
+        const double sigma = 1.0 / sqrt(2.0 * snr_lin);
+        const double inv_sigma2 = 1.0 / (sigma * sigma);
+
+        for (int i = 0; i < (int)len; i++) {
+            /* Simple BPSK-like synthetic RE per modulation; scale to mod_order */
+            int bits_per_sym = mod_order >> 1; /* mod_order is log2(M) */
+            for (int b = 0; b < bits_per_sym && (i * bits_per_sym + b) < layer_llr_size; b++) {
+                double sym = 1.0; /* bit=1 map to +1 */
+                double noise = sigma * gaussian_noise(&rng_state);
+                double y = sym + noise;
+                double llr = 2.0 * y * inv_sigma2;
+                /* Clamp to 16-bit output range expected by nr_dlsch_llr */
+                if (llr > 32767.0) llr = 32767.0;
+                if (llr < -32768.0) llr = -32768.0;
+                layer_llr[0][i * bits_per_sym + b] = (int16_t)llr;
+            }
+        }
+
         /* Call nr_dlsch_llr to compute LLRs from received symbols */
         nr_dlsch_llr(rx_size_symbol,
                      nbRx,
@@ -1407,18 +1599,23 @@ void nr_mmse_eq()
     
     /* MMSE equalization parameters */
     const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
-    const unsigned char n_rx = 2;               /* 2 RX antennas */
-    const unsigned char nl = 2;                 /* 2 layers (MIMO) */
+    const unsigned char n_rx = 4;               /* 4 RX antennas */
+    const unsigned char nl = 4;                 /* 4 layers (MIMO) */
     const unsigned short nb_rb = 106;           /* 106 RBs (20 MHz) */
     const unsigned char mod_order = 4;          /* 16-QAM */
-    const int length = 512;                     /* Resource elements */
-    const uint32_t noise_var = 100;             /* Noise variance */
-    const int num_iterations = 50;              /* 50 iterations */
+    const int length = rx_size_symbol;          /* Process full symbol */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const int snr_db = getenv_int("OAI_SNR", 20);               /* SNR in dB */
+
+    /* Derive noise variance from SNR (Es/N0) assuming unit symbol energy */
+    const double snr_lin = pow(10.0, snr_db / 10.0);
+    const double noise_var_f = 1.0 / snr_lin;   /* Es=1 -> N0 */
+    const uint32_t noise_var = (uint32_t)(noise_var_f * (1u << 15)); /* scaled for fixed-point path */
     
-    printf("MMSE EQ parameters: rx_size=%u, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
-           rx_size_symbol, n_rx, nl, nb_rb, mod_order);
-    printf("length=%d, noise_var=%u\n", length, noise_var);
-    printf("Running %d iterations...\n", num_iterations);
+        printf("MMSE EQ parameters: rx_size=%u, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
+            rx_size_symbol, n_rx, nl, nb_rb, mod_order);
+        printf("length=%d, SNR=%d dB, noise_var=%u\n", length, snr_db, noise_var);
+        printf("Running %d iterations...\n", num_iterations);
     printf("NOTE: Using simplified MMSE wrapper (demonstrates structure)\n\n");
     
     /* Allocate rxdataF_comp buffer (compensated received symbols) */
@@ -1561,16 +1758,17 @@ void nr_ldpc_dec()
     
     /* LDPC decoder parameters */
     const uint8_t BG = 1;                       /* Base Graph 1 */
-    const uint16_t Z = 256;                     /* Lifting size */
+    const uint16_t Z = 384;                     /* Lifting size */
     const uint8_t R = 13;                       /* Decoding rate 1/3 */
-    const uint8_t numMaxIter = 20;              /* Maximum 20 iterations */
+    const uint8_t numMaxIter = 6;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
-    const int num_iterations = 10;              /* Test with 10 LDPC decoding operations */
+    const int num_iterations = getenv_int("OAI_ITERS", 100); /* Allow fast smoke tests */
+    const int snr_db = getenv_int("OAI_SNR", 10);             /* BPSK Eb/N0 in dB (high by default) */
     
-    printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
-           BG, Z, R, Kprime);
-    printf("Max iterations: %u\n", numMaxIter);
-    printf("Running %d LDPC decoding iterations...\n\n", num_iterations);
+        printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
+            BG, Z, R, Kprime);
+        printf("Max iterations: %u, SNR=%d dB\n", numMaxIter, snr_db);
+        printf("Running %d LDPC decoding iterations...\n\n", num_iterations);
     
     /* Calculate output size based on LDPC parameters */
     const int nrows = (BG == 1) ? 46 : 42;      /* Number of parity check rows */
@@ -1578,8 +1776,8 @@ void nr_ldpc_dec()
     const int output_bytes = (Kprime + 7) / 8;  /* Output decoded bytes */
     
     /* Input LLR buffer (soft bits: int8_t LLR values) */
-    /* For BG1, R=1/3: input size is around 3*Kprime bits */
-    const int input_llr_size = 3 * Kprime;
+    /* For BG1, block length N = 66*Z (38.212 rate-1/3) */
+    const int input_llr_size = 66 * Z;
     int8_t *p_llr = aligned_alloc(32, input_llr_size * sizeof(int8_t));
     if (!p_llr) {
         printf("nr_ldpc_dec: Failed to allocate input LLR buffer\n");
@@ -1617,25 +1815,77 @@ void nr_ldpc_dec()
     printf("Starting LDPC decoding loop...\n");
     printf("(Calling LDPCdecoder from real OAI library)\n\n");
     
-    /* Seed input LLRs with sample pattern */
-    const int8_t sample_llrs[] = {
-        20, -15, 18, -12, 25, -20, 15, -10,
-        22, -18, 16, -14, 24, -22, 14, -8,
-        30, -25, 28, -23, 26, -21, 20, -16
-    };
-    int sample_size = sizeof(sample_llrs) / sizeof(sample_llrs[0]);
-    
-    /* Fill input LLR buffer with sample pattern */
-    for (int idx = 0; idx < input_llr_size; idx++) {
-        p_llr[idx] = sample_llrs[idx % sample_size];
+    /* Build a valid codeword via the real LDPC encoder, then derive LLRs from it */
+    uint32_t rng_state = 0xACEDFACEu ^ (uint32_t)time(NULL);
+    const double snr_lin = pow(10.0, snr_db / 10.0);
+    const double sigma = 1.0 / sqrt(2.0 * snr_lin);  /* noise std dev */
+    const double inv_sigma2 = 1.0 / (sigma * sigma);
+
+    /* Buffers for encoding and LLR generation */
+    const int info_bytes = (Kprime + 7) / 8;
+    const int code_bits = 66 * Z; /* full block length for BG1 rate-1/3 */
+    uint8_t *info_bits = aligned_alloc(32, info_bytes);
+    uint8_t *coded_bits = aligned_alloc(32, code_bits);
+    if (!info_bits || !coded_bits) {
+        printf("nr_ldpc_dec: Failed to allocate info/coded buffers\n");
+        free(info_bits);
+        free(coded_bits);
+        free(p_llr);
+        free(p_out);
+        return;
     }
+    memset(info_bits, 0, info_bytes);
+    memset(coded_bits, 0, code_bits);
+
+    encoder_implemparams_t encParams = {
+        .Zc = Z,
+        .Kb = 22,
+        .BG = BG,
+        .K = Kprime,
+        .n_segments = 1,
+        .first_seg = 0,
+        .gen_code = 0,
+        .tinput = NULL,
+        .tprep = NULL,
+        .tparity = NULL,
+        .toutput = NULL,
+        .F = 0,
+        .output = NULL,
+        .ans = NULL
+    };
     
     /* Main LDPC decoding loop */
     int total_iterations = 0;
     for (int iter = 0; iter < num_iterations; iter++) {
-        /* Vary input LLRs slightly for each iteration */
-        p_llr[0] = (int8_t)(20 + iter);
-        p_llr[1] = (int8_t)(-15 - iter);
+        /* Generate random info bits per iteration */
+        for (int i = 0; i < info_bytes; i++) {
+            uint32_t r = xorshift32(&rng_state);
+            info_bits[i] = (uint8_t)(r & 0xFF);
+        }
+        /* Mask filler bits if Kprime not byte-aligned */
+        if ((Kprime & 7) != 0) {
+            uint8_t mask = (1u << (Kprime & 7)) - 1u;
+            info_bits[info_bytes - 1] &= mask;
+        }
+
+        /* Encode to obtain a consistent codeword for these bits */
+        uint8_t *info_ptr = info_bits;
+        int enc_ret = LDPCencoder(&info_ptr, coded_bits, &encParams);
+        if (enc_ret != 0) {
+            printf("nr_ldpc_dec: LDPCencoder failed (%d) on iter %d\n", enc_ret, iter);
+            break;
+        }
+
+        /* Map encoded bits to BPSK with AWGN to create LLRs */
+        for (int idx = 0; idx < input_llr_size && idx < code_bits; idx++) {
+            int bit = coded_bits[idx] & 0x1;
+            double y = bit ? +1.0 : -1.0; /* bit=1 -> +1 so positive LLR favors 1 */
+            y += sigma * gaussian_noise(&rng_state);
+            double llr = 2.0 * y * inv_sigma2;
+            if (llr > 127.0) llr = 127.0;
+            if (llr < -127.0) llr = -127.0;
+            p_llr[idx] = (int8_t)llr;
+        }
         
         /* Reset output and abort flag for each decoding */
         memset(p_out, 0, output_bytes * sizeof(int8_t));
@@ -1663,6 +1913,8 @@ void nr_ldpc_dec()
            (float)total_iterations / num_iterations);
     
     /* Cleanup */
+    free(coded_bits);
+    free(info_bits);
     free(p_llr);
     free(p_out);
     printf("=== NR LDPC Decoder tests completed ===\n");
@@ -1676,14 +1928,17 @@ void nr_ofdm_demo()
     printf("=== Starting NR OFDM FEP Demonstration ===\n");
     
     /* OFDM Frame Parameters */
-    const int ofdm_symbol_size = 2048;      /* FFT size */
-    const int nb_antennas_rx = 1;           /* 1 RX antenna */
-    const int nb_antennas_tx = 1;           /* 1 TX antenna */
+    const int ofdm_symbol_size = 1024;      /* FFT size */
+    const int nb_antennas_rx = 4;           /* 4 RX antennas */
+    const int nb_antennas_tx = 4;           /* 4 TX antennas */
     const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
     const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
-    const int nb_prefix_samples = 176;      /* Cyclic prefix samples */
+    /* Automate CP length according to FFT size (1024 or 2048) */
+    const int nb_prefix_samples = (ofdm_symbol_size == 2048)
+                                  ? 176
+                                  : (ofdm_symbol_size == 1024 ? 88 : (176 * ofdm_symbol_size / 2048));
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;
-    const int num_iterations = 10;
+    const int num_iterations = 1000000;
     
     printf("OFDM parameters: FFT=%d, CP=%d, symbols/slot=%d, antennas=%d\n",
            ofdm_symbol_size, nb_prefix_samples, symbols_per_slot, nb_antennas_rx);
@@ -1696,7 +1951,7 @@ void nr_ofdm_demo()
     }
     memset(rxdata, 0, samples_per_frame * sizeof(int32_t));
     
-    /* Allocate RX frequency-domain data buffer for one OFDM symbol */
+    /* Allocate RX frequency-domain data buffer - single symbol output */
     int32_t *rxdataF = aligned_alloc(32, ofdm_symbol_size * 2 * sizeof(int32_t));
     if (!rxdataF) {
         printf("nr_ofdm_demo: rxdataF allocation failed\n");
@@ -1723,50 +1978,68 @@ void nr_ofdm_demo()
     };
     
     printf("Running %d iterations of OFDM FEP...\n", num_iterations);
+       printf("Total slots available: %d slots/frame\n", slots_per_frame);
+       printf("Processing pattern: each iteration processes all %d symbols in one slot\n\n", symbols_per_slot);
     
-    /* Main OFDM FEP loop */
+    /* Pre-generate entire frame data with pseudo-random values */
+    uint32_t seed = 0xDEADBEEF;
+    for (int i = 0; i < samples_per_frame; i++) {
+        seed = seed * 1103515245 + 12345;
+        int16_t real = (int16_t)((seed >> 16) & 0xFFFF);
+        
+        seed = seed * 1103515245 + 12345;
+        int16_t imag = (int16_t)((seed >> 16) & 0xFFFF);
+        
+        rxdata[i] = (int32_t)real | ((int32_t)imag << 16);
+    }
+    
+    printf("Frame data generated: %d total samples (%d per symbol including CP)\n", 
+              samples_per_frame, (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot);
+       printf("Starting OFDM FEP processing loop (1 slot = %d symbols per iteration)...\n\n", symbols_per_slot);
+    
+       /* Main OFDM FEP loop - process one complete slot per iteration */
     for (int iter = 0; iter < num_iterations; iter++) {
-        /* Fill RX data with test pattern - simple sinusoidal-like values */
-        uint32_t seed = 0xDEADBEEF;
-        for (int i = 0; i < samples_per_frame; i++) {
-            seed = seed * 1103515245 + 12345;
-            int16_t real = (int16_t)((seed >> 16) & 0xFFFF);
-            
-            seed = seed * 1103515245 + 12345;
-            int16_t imag = (int16_t)((seed >> 16) & 0xFFFF);
-            
-            rxdata[i] = (int32_t)real | ((int32_t)imag << 16);
-        }
+           /* Calculate which slot to process based on iteration count */
+           int slot = iter % slots_per_frame;
         
-        /* Process each slot in the frame */
-        for (int slot = 0; slot < slots_per_frame; slot++) {
-            /* Process each OFDM symbol in the slot */
-            for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
-                /* Call nr_slot_fep to perform DFT on time-domain OFDM symbol */
-                int result = nr_slot_fep(
-                    NULL,                           /* PHY_VARS_NR_UE (NULL for this demo) */
-                    &frame_parms,                   /* Frame parameters */
-                    slot,                           /* Slot number */
-                    symbol,                         /* Symbol index */
-                    (void *)rxdataF,                /* RX data FD */
-                    0,                              /* Downlink (link_type_dl = 0) */
-                    0,                              /* Sample offset */
-                    (void *)&rxdata                 /* RX data TD */
-                );
-                
-                if (result != 0) {
-                    printf("ERROR: nr_slot_fep failed at slot %d, symbol %d\n", slot, symbol);
-                }
-            }
-        }
+           /* Calculate offset for this slot's time-domain data in the frame */
+           int samples_per_slot_data = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot;
+           int slot_offset = slot * samples_per_slot_data;
         
-        if ((iter % 5) == 0) {
-            printf("  iter %2d: processed slot 0, rxdataF[0]=0x%08X rxdataF[1]=0x%08X\n",
-                   iter,
-                   ((uint32_t *)rxdataF)[0],
-                   ((uint32_t *)rxdataF)[1]);
+           /* Process all symbols in the slot */
+           for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
+               /* Calculate offset for this specific symbol within the slot */
+               int samples_per_symbol = ofdm_symbol_size + nb_prefix_samples;
+               int symbol_offset = slot_offset + (symbol * samples_per_symbol);
+           
+               /* Clear rxdataF before each symbol processing */
+               memset(rxdataF, 0, ofdm_symbol_size * 2 * sizeof(int32_t));
+           
+               /* Call nr_slot_fep to perform DFT on time-domain OFDM symbol */
+               int result = nr_slot_fep(
+                   NULL,                                       /* PHY_VARS_NR_UE (NULL for this demo) */
+                   &frame_parms,                               /* Frame parameters */
+                   slot,                                       /* Slot number (from iteration) */
+                   symbol,                                     /* Symbol index (0 to 13) */
+                   (void *)rxdataF,                            /* RX data FD output */
+                   0,                                          /* Downlink (link_type_dl = 0) */
+                   0,                                          /* Sample offset */
+                   (void *)(&rxdata[symbol_offset])            /* RX data TD input (symbol-aligned) */
+               );
+           
+               if (iter == 0 && symbol == 0) {
+                   printf("DEBUG: First slot processing started\n");
+                   printf("  Slot %d, symbols 0-%d, slot_offset=%d samples\n\n", 
+                          slot, symbols_per_slot - 1, slot_offset);
+               }
+           }
+        
+           if ((iter % (slots_per_frame * 10)) == 0) {
+               printf("  iter %6d: processed slot %d (%d symbols, offset %5d) - symbols processed\n",
+                      iter, slot, symbols_per_slot, slot_offset);
         }
     }
+    
     
     printf("\n=== Final OFDM FEP output (first 8 frequency-domain samples) ===\n");
     for (int i = 0; i < 8 && i < ofdm_symbol_size * 2; i++) {

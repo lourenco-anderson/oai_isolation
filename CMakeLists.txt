@@ -35,6 +35,11 @@ target_include_directories(oai_isolation PUBLIC
     "${CMAKE_SOURCE_DIR}/ext/openair/openair2/"
     "${CMAKE_SOURCE_DIR}/ext/openair/common"
     "${CMAKE_SOURCE_DIR}/ext/openair/common/utils"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/barrier"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/actor"
+    "${CMAKE_SOURCE_DIR}/ext/openair/common/utils/threadPool"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/NR_UE_PHY_INTERFACE"
+    "${CMAKE_SOURCE_DIR}/ext/openair/openair2/NR_PHY_INTERFACE"
     "${CMAKE_SOURCE_DIR}/ext/openair/executables"
     "${CMAKE_SOURCE_DIR}/ext/openair/radio/COMMON/"
     "${CMAKE_SOURCE_DIR}/ext/openair/nfapi/open-nFAPI/nfapi/public_inc/"
@@ -58,6 +63,7 @@ target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
 target_link_libraries(oai_isolation PRIVATE
     PHY_NR_COMMON     
     PHY_COMMON         
+    ${OAI_BUILD_DIR}/common/utils/nr/libnr_common.a
     CONFIG_LIB             
     PHY_NR             
     PHY               

@@ -44,12 +44,8 @@ void nr_soft_demod();
 void nr_mmse_eq();
 void nr_ldpc_dec();
 
-/* OAI real function declarations - using simple signatures to avoid header dependencies */
+/* OAI real function declarations */
 int nr_slot_fep(void *ue, const void *frame_parms, unsigned int slot,
                 unsigned int symbol, void *rxdataF, int linktype,
                 uint32_t sample_offset, void *rxdata);
 
-void nr_pdsch_channel_estimation(void *ue, const void *frame_parms,
-                                  unsigned int symbol, uint8_t gNB_id,
-                                  uint8_t nb_antennas_rx, void *dl_ch,
-                                  void *rxdataF, uint32_t *nvar);

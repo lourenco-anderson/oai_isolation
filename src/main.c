@@ -26,7 +26,7 @@ static void dispatch(const char *fn)
 
 int main(int argc, char **argv)
 {
-    const char *fn = (argc > 1) ? argv[1] : "nr_scramble"; /* default to nr_crc */
+    const char *fn = (argc > 1) ? argv[1] : "nr_ch_estimation"; /* default to channel estimation */
     dispatch(fn);  
     return 0;
 }
