@@ -26,7 +26,7 @@ static void dispatch(const char *fn)
 
 int main(int argc, char **argv)
 {
-    const char *fn = (argc > 1) ? argv[1] : "nr_crc"; /* default to nr_crc */
-    dispatch(fn);
+    const char *fn = (argc > 1) ? argv[1] : "nr_scramble"; /* default to nr_crc */
+    dispatch(fn);  
     return 0;
 }

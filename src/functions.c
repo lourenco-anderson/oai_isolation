@@ -30,10 +30,11 @@ typedef struct ofdm_ctx_s {
     int fftsize;
     int nb_symbols;
     int nb_prefix_samples;
-    c16_t *input;     /* frequency-domain input (fftsize) */
-    c16_t *output;    /* time-domain output (nb_symbols * (prefix+fftsize)) */
+    int nb_tx;        /* number of TX antennas */
+    c16_t **input;    /* frequency-domain input per antenna [nb_tx][fftsize] */
+    c16_t **output;   /* time-domain output per antenna [nb_tx][nb_symbols * (prefix+fftsize)] */
     void *dlh;        /* handle from dlopen for libdfts.so (optional) */
-    uint32_t rnd_state; /* xorshift PRNG state */
+    uint32_t *rnd_state; /* xorshift PRNG state per antenna [nb_tx] */
 } ofdm_ctx_t;
 
 /* xorshift32 PRNG: faster and thread-local friendly than rand() */
@@ -48,8 +49,21 @@ static inline uint32_t xorshift32(uint32_t *state)
     return x;
 }
 
+/* Helper: read integer from environment with default */
+static int getenv_int(const char *name, int defval)
+{
+    const char *s = getenv(name);
+    if (!s || !*s) return defval;
+    char *end = NULL;
+    long v = strtol(s, &end, 10);
+    if (end == s) return defval;
+    if (v < INT32_MIN) v = INT32_MIN;
+    if (v > INT32_MAX) v = INT32_MAX;
+    return (int)v;
+}
+
 /* Initialize OFDM context: load dfts lib (path via env or default), allocate aligned buffers */
-static ofdm_ctx_t *ofdm_init(const char *dfts_path, int fftsize, int nb_symbols, int nb_prefix_samples)
+static ofdm_ctx_t *ofdm_init(const char *dfts_path, int fftsize, int nb_symbols, int nb_prefix_samples, int nb_tx)
 {
     ofdm_ctx_t *c = calloc(1, sizeof(*c));
     if (!c) return NULL;
@@ -57,25 +71,43 @@ static ofdm_ctx_t *ofdm_init(const char *dfts_path, int fftsize, int nb_symbols,
     c->fftsize = fftsize;
     c->nb_symbols = nb_symbols;
     c->nb_prefix_samples = nb_prefix_samples;
+    c->nb_tx = nb_tx;
 
     size_t in_sz = sizeof(c16_t) * (size_t)fftsize;
     size_t out_sz = sizeof(c16_t) * (size_t)nb_symbols * (size_t)(nb_prefix_samples + fftsize);
 
-    c->input = aligned_alloc(32, in_sz);
-    c->output = aligned_alloc(32, out_sz);
-
-    if (!c->input || !c->output) {
+    /* Allocate per-antenna buffers */
+    c->input = calloc(nb_tx, sizeof(c16_t*));
+    c->output = calloc(nb_tx, sizeof(c16_t*));
+    c->rnd_state = calloc(nb_tx, sizeof(uint32_t));
+    
+    if (!c->input || !c->output || !c->rnd_state) {
         free(c->input);
         free(c->output);
+        free(c->rnd_state);
         free(c);
         return NULL;
     }
 
-    memset(c->input, 0, in_sz);
-    memset(c->output, 0, out_sz);
-
-    /* PRNG seed per-context */
-    c->rnd_state = (uint32_t)time(NULL) ^ (uint32_t)(uintptr_t)c;
+    for (int aa = 0; aa < nb_tx; aa++) {
+        c->input[aa] = aligned_alloc(32, in_sz);
+        c->output[aa] = aligned_alloc(32, out_sz);
+        if (!c->input[aa] || !c->output[aa]) {
+            for (int i = 0; i <= aa; i++) {
+                free(c->input[i]);
+                free(c->output[i]);
+            }
+            free(c->input);
+            free(c->output);
+            free(c->rnd_state);
+            free(c);
+            return NULL;
+        }
+        memset(c->input[aa], 0, in_sz);
+        memset(c->output[aa], 0, out_sz);
+        /* Independent PRNG seed per antenna */
+        c->rnd_state[aa] = (uint32_t)time(NULL) ^ (uint32_t)aa;
+    }
 
     /* Load libdfts: prefer env var, then provided path, then default relative path */
     const char *env = getenv("OAI_DFTS_LIB");
@@ -106,8 +138,21 @@ static void ofdm_free(ofdm_ctx_t *c)
 {
     if (!c) return;
     if (c->dlh) dlclose(c->dlh);
-    free(c->input);
-    free(c->output);
+    
+    /* Free per-antenna buffers */
+    if (c->input) {
+        for (int aa = 0; aa < c->nb_tx; aa++) {
+            free(c->input[aa]);
+        }
+        free(c->input);
+    }
+    if (c->output) {
+        for (int aa = 0; aa < c->nb_tx; aa++) {
+            free(c->output[aa]);
+        }
+        free(c->output);
+    }
+    free(c->rnd_state);
     free(c);
 }
 
@@ -173,15 +218,16 @@ void nr_precoding()
 
     printf("=== Starting NR Precoding tests ===\n");
 
-    /* Precoding parameters: basic PDSCH config */
-    const int nb_layers = 2;                /* 2 layers (MIMO) */
-    const int symbol_sz = 4096;             /* OFDM symbol size (12 RBs) */
-    const int rbSize = 12;                  /* 12 resource blocks */
-    const int nb_symbols = 14;               /* 14 OFDM symbols per slot */
-    const int num_iterations = 100;
+    /* Precoding parameters: configurable via environment variables */
+    const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
+    const int nb_rb       = getenv_int("OAI_RB", 106);          /* e.g., 106 for 20 MHz */
+    const int mod_order   = getenv_int("OAI_MOD_ORDER", 4);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+    const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
+    const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
 
     /* Initialize precoding context and allocate buffers */
-    precoding_ctx_t *ctx = precoding_init(nb_layers, symbol_sz, rbSize);
+    precoding_ctx_t *ctx = precoding_init(nb_layers, symbol_sz, nb_rb);
     if (!ctx) {
         printf("precoding_init failed\n");
         return;
@@ -189,7 +235,7 @@ void nr_precoding()
 
     /* Mock NR_DL_FRAME_PARMS for minimal do_onelayer support */
     NR_DL_FRAME_PARMS frame_parms = {
-        .N_RB_DL = 106,                     /* 106 RBs = 20 MHz BW */
+        .N_RB_DL = nb_rb,                   /* Match configured RBs */
         .ofdm_symbol_size = symbol_sz,
         .first_carrier_offset = 0,
         .nb_antennas_tx = 2,
@@ -200,9 +246,9 @@ void nr_precoding()
     /* Mock nfapi_nr_dl_tti_pdsch_pdu_rel15_t for minimal do_onelayer support */
     nfapi_nr_dl_tti_pdsch_pdu_rel15_t rel15 = {
         .rbStart = 0,
-        .rbSize = rbSize,
+        .rbSize = nb_rb,
         .BWPStart = 0,
-        .qamModOrder = {2, 2},  /* QPSK */
+        .qamModOrder = { (uint8_t)mod_order, (uint8_t)mod_order },
         .nrOfLayers = nb_layers,
         .dlDmrsSymbPos = 0x00,  /* No DMRS in this test */
         .pduBitmap = 0x00,      /* No PTRS in this test */
@@ -214,23 +260,47 @@ void nr_precoding()
     };
     ctx->rel15 = &rel15;
 
-    printf("Precoding loop: %d layers, %d RBs, %d symbols per slot\n", 
-           nb_layers, rbSize, nb_symbols);
+    printf("Precoding loop: layers=%d, RBs=%d, mod_order=%d, symbol_sz=%d, symbols/slot=%d\n", 
+           nb_layers, nb_rb, mod_order, symbol_sz, nb_symbols);
 
     /* Main precoding loop: iterate and call do_onelayer for each symbol */
     for (int iter = 0; iter < num_iterations; iter++) {
-        if ((iter % 10) == 0) printf("--- Precoding iteration %d ---\n", iter);
+        if ((iter % 100) == 0) printf("--- Precoding iteration %d ---\n", iter);
 
-        /* Fill tx_layer with random 16-QAM data using xorshift */
+        /* Fill tx_layer with random constellation samples according to mod_order */
         for (int layer = 0; layer < nb_layers; layer++) {
             for (int k = 0; k < symbol_sz; k++) {
                 uint32_t r = xorshift32(&ctx->rnd_state);
-                uint8_t idx_re = r & 3;
-                uint8_t idx_im = (r >> 2) & 3;
-
                 int idx = layer * symbol_sz + k;
-                ctx->tx_layer[idx].r = (int16_t)qam16_levels[idx_re];
-                ctx->tx_layer[idx].i = (int16_t)qam16_levels[idx_im];
+
+                switch (mod_order) {
+                    case 2: { /* QPSK: 2 bits -> 4 points */
+                        uint8_t sidx = (uint8_t)(r & 0x3);
+                        ctx->tx_layer[idx].r = qpsk_table[sidx][0];
+                        ctx->tx_layer[idx].i = qpsk_table[sidx][1];
+                        break;
+                    }
+                    case 6: { /* 64-QAM: 6 bits -> 64 points */
+                        uint8_t sidx = (uint8_t)(r & 0x3F);
+                        ctx->tx_layer[idx].r = qam64_table[sidx][0];
+                        ctx->tx_layer[idx].i = qam64_table[sidx][1];
+                        break;
+                    }
+                    case 8: { /* 256-QAM: 8 bits -> 256 points */
+                        uint8_t sidx = (uint8_t)(r & 0xFF);
+                        ctx->tx_layer[idx].r = qam256_table[sidx][0];
+                        ctx->tx_layer[idx].i = qam256_table[sidx][1];
+                        break;
+                    }
+                    case 4:
+                    default: { /* 16-QAM via per-axis Gray-coded levels */
+                        uint8_t idx_re = (uint8_t)(r & 3);
+                        uint8_t idx_im = (uint8_t)((r >> 2) & 3);
+                        ctx->tx_layer[idx].r = (int16_t)qam16_levels[idx_re];
+                        ctx->tx_layer[idx].i = (int16_t)qam16_levels[idx_im];
+                        break;
+                    }
+                }
             }
         }
 
@@ -257,7 +327,7 @@ void nr_precoding()
                     NULL                        /* dmrs_start */
                 );
 
-                if ((iter % 10) == 0 && l_symbol == 0) {
+                if ((iter % 100) == 0 && l_symbol == 0) {
                     printf("  iter %d, symbol %d, layer %d: re_processed=%d\n", 
                            iter, l_symbol, layer, re_processed);
                 }
@@ -279,17 +349,26 @@ void nr_scramble(){
     logInit();
     
     /* Requested parameters */
-    const uint32_t size   = 2688;      /* bits */
+    const uint32_t size   = 82368;      /* bits */
     const uint8_t  q      = 0;
     const uint32_t Nid    = 0;
     const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
     
-    /* Derived buffer sizes: 2688 bits = 336 bytes; 2688/32 = 84 words */
-    uint8_t  in[336] __attribute__((aligned(32)));
-    uint32_t out[84]  __attribute__((aligned(32)));
+    /* Derived buffer sizes based on requested bit size */
+    const uint32_t in_bytes = (size + 7) / 8;           /* input bytes */
+    const uint32_t out_words = (size + 31) / 32;        /* output 32-bit words */
     
-    memset(in, 0, sizeof(in));
-    memset(out, 0, sizeof(out));
+    uint8_t  *in  = malloc(in_bytes);
+    uint32_t *out = malloc(out_words * sizeof(uint32_t));
+    if (!in || !out) {
+        printf("nr_scramble: buffer allocation failed (in=%p, out=%p)\n", (void*)in, (void*)out);
+        free(in);
+        free(out);
+        return;
+    }
+    
+    memset(in, 0, in_bytes);
+    memset(out, 0, out_words * sizeof(uint32_t));
     
     /* Optional: seed the input with a small sample pattern */
     const uint8_t sample[] = {
@@ -297,12 +376,12 @@ void nr_scramble(){
         0xFF, 0x35, 0xA8, 0x44, 0xF9, 0x21, 0x92, 0xAA,
         0x68, 0x28, 0x2A
     };
-    memcpy(in, sample, sizeof(sample) < sizeof(in) ? sizeof(sample) : sizeof(in));
+    memcpy(in, sample, sizeof(sample) < in_bytes ? sizeof(sample) : in_bytes);
     
     printf("Starting scrambling tests...\n");
     
     /* Run the scrambling 1000 times (as requested earlier) with small variation */
-    for (int iter = 0; iter < 1000; ++iter) {
+    for (int iter = 0; iter < 100000000; ++iter) {
         /* vary a byte so each run differs */
         in[0] = (uint8_t)iter;
         
@@ -313,12 +392,18 @@ void nr_scramble(){
         }
     }
     
-    /* Print final output buffer (rounded size in 32-bit words) */
+    /* Print final output buffer (first 64 words for inspection) */
     int roundedSz = (size + 31) / 32;
-    printf("Final output (roundedSz=%d):\n", roundedSz);
-    for (int i = 0; i < roundedSz; ++i) {
+    int print_limit = roundedSz < 64 ? roundedSz : 64;
+    printf("Final output (showing first %d of %d words):\n", print_limit, roundedSz);
+    for (int i = 0; i < print_limit; ++i) {
         printf("out[%02d] = 0x%08X\n", i, out[i]);
-    }    
+    }
+    
+    /* Cleanup */
+    free(in);
+    free(out);
+    
 }
 
 void nr_crc(){
@@ -376,57 +461,71 @@ void nr_ofdm_modulation()
         }
     }
 
-    const int fftsize           = 2048;
-    const int nb_symbols        = 1;       // 1 OFDM symbol
-    const int nb_prefix_samples = 176;     // CP for 2048-size FFT
+    /* Group core parameters together */
+    const int fftsize        = 1024;
+    const int nb_symbols     = 1;          // number of OFDM symbols
+    const int num_iterations = 10000000;   // number of iterations
+    const int nb_tx          = 2;          // number of transmit antennas
+
+    /* Automate CP length according to FFT size (1024 or 2048) */
+    const int nb_prefix_samples = (fftsize == 2048)
+                                  ? 176
+                                  : (fftsize == 1024 ? 88 : (176 * fftsize / 2048));
     const Extension_t extype    = CYCLIC_PREFIX;
 
     /* Initialize context and buffers once, reuse across iterations */
     ofdm_ctx_t *ctx = ofdm_init("/home/anderson/dev/oai_isolation/ext/openair/cmake_targets/ran_build/build/libdfts.so",
-                                fftsize, nb_symbols, nb_prefix_samples);
+                                fftsize, nb_symbols, nb_prefix_samples, nb_tx);
     if (!ctx) {
         printf("ofdm_init failed\n");
         return;
     }
 
     printf("=== Starting OFDM modulation tests (16-QAM random input) ===\n");
+    printf("Parameters: fftsize=%d, nb_symbols=%d, nb_prefix_samples=%d, nb_tx=%d, iterations=%d\n",
+           fftsize, nb_symbols, nb_prefix_samples, nb_tx, num_iterations);
 
-    const int iterations = 1000;
-    for (int iter = 0; iter < iterations; iter++) {
+    for (int iter = 0; iter < num_iterations; iter++) {
         if ((iter % 10) == 0) printf("\n--- OFDM modulation iteration %d ---\n", iter);
 
-        /* Fill entire frequency-domain buffer with random 16-QAM using xorshift */
-        for (int k = 0; k < fftsize; k++) {
-            uint32_t r = xorshift32(&ctx->rnd_state);
-            uint8_t idx_re = r & 3;
-            uint8_t idx_im = (r >> 2) & 3;
-            ctx->input[k].r = (int16_t)qam16_levels[idx_re];
-            ctx->input[k].i = (int16_t)qam16_levels[idx_im];
-        }
+        /* Process each antenna */
+        for (int aa = 0; aa < nb_tx; aa++) {
+            /* Fill entire frequency-domain buffer with random 16-QAM using xorshift */
+            for (int k = 0; k < fftsize; k++) {
+                uint32_t r = xorshift32(&ctx->rnd_state[aa]);
+                uint8_t idx_re = r & 3;
+                uint8_t idx_im = (r >> 2) & 3;
+                ctx->input[aa][k].r = (int16_t)qam16_levels[idx_re];
+                ctx->input[aa][k].i = (int16_t)qam16_levels[idx_im];
+            }
 
-        /* Optional: vary one subcarrier so we see change */
-        ctx->input[100].r = (int16_t)iter;
-        if ((iter % 10) == 0) printf("Input sample [100]: %d\n", ctx->input[100].r);
+            /* Optional: vary one subcarrier so we see change */
+            ctx->input[aa][100].r = (int16_t)(iter + aa * 1000);
+            if ((iter % 10) == 0) printf("Input sample [ant %d][100]: %d\n", aa, ctx->input[aa][100].r);
 
-        /* Call OFDM mod using pre-allocated aligned buffers */
-        PHY_ofdm_mod((int *)ctx->input,
-                     (int *)ctx->output,
-                     fftsize,
-                     nb_symbols,
-                     nb_prefix_samples,
-                     extype);
+            /* Call OFDM mod using pre-allocated aligned buffers for this antenna */
+            PHY_ofdm_mod((int *)ctx->input[aa],
+                         (int *)ctx->output[aa],
+                         fftsize,
+                         nb_symbols,
+                         nb_prefix_samples,
+                         extype);
 
-        if ((iter % 10) == 0) {
-            printf("iter %d: output[0]=(r=%d,i=%d), output[1]=(r=%d,i=%d)\n",
-                   iter,
-                   ctx->output[0].r, ctx->output[0].i,
-                   ctx->output[1].r, ctx->output[1].i);
+            if ((iter % 10) == 0) {
+                printf("iter %d ant %d: output[0]=(r=%d,i=%d), output[1]=(r=%d,i=%d)\n",
+                       iter, aa,
+                       ctx->output[aa][0].r, ctx->output[aa][0].i,
+                       ctx->output[aa][1].r, ctx->output[aa][1].i);
+            }
         }
     }
 
     printf("\n=== Final OFDM time-domain samples ===\n");
-    for (int i = 0; i < 16; i++) {
-        printf("output[%02d] = (r=%d,i=%d)\n", i, ctx->output[i].r, ctx->output[i].i);
+    for (int aa = 0; aa < nb_tx; aa++) {
+        printf("Antenna %d:\n", aa);
+        for (int i = 0; i < 16; i++) {
+            printf("  output[%02d] = (r=%d,i=%d)\n", i, ctx->output[aa][i].r, ctx->output[aa][i].i);
+        }
     }
 
     ofdm_free(ctx);
@@ -437,19 +536,51 @@ void nr_modulation_test()
     /* Initialize the logging system first */
     logInit();
     
-    printf("=== Starting NR Modulation tests (all QAM orders) ===\n");
+    /* Test parameters - configurable modulation and length */
+    const uint32_t modulation_order = 4;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
+    const uint32_t length = 82368;            /* Input bits per iteration */
+    const int num_iterations = 1000000;       /* Number of test runs */
     
-    /* Test parameters */
-    const uint32_t bits_per_mod[4] = { 2, 4, 6, 8 };              /* QPSK, 16-QAM, 64-QAM, 256-QAM */
-    const char *mod_names[4] = { "QPSK", "16-QAM", "64-QAM", "256-QAM" };
-    const int16_t *const tables[4] = { (int16_t *)qpsk_table, (int16_t *)qam16_table, (int16_t *)qam64_table, (int16_t *)qam256_table };
-    const uint32_t table_sizes[4] = { 4, 16, 64, 256 };           /* Number of constellation points per modulation */
-    const int num_iterations = 50;                                 /* 50 iterations per modulation order */
-    const uint32_t length = 512;                                   /* Input bits per iteration */
+    /* Map modulation order to table and name */
+    const int16_t *mod_table;
+    const char *mod_name;
+    uint32_t table_size;
     
-    /* Allocate aligned buffers (max size for 256-QAM) */
-    const uint32_t max_symbols = length / bits_per_mod[0];         /* length/2 for QPSK */
-    const size_t out_sz = max_symbols * sizeof(int16_t) * 2;
+    switch (modulation_order) {
+        case 2:
+            mod_table = (int16_t *)qpsk_table;
+            mod_name = "QPSK";
+            table_size = 4;
+            break;
+        case 4:
+            mod_table = (int16_t *)qam16_table;
+            mod_name = "16-QAM";
+            table_size = 16;
+            break;
+        case 6:
+            mod_table = (int16_t *)qam64_table;
+            mod_name = "64-QAM";
+            table_size = 64;
+            break;
+        case 8:
+            mod_table = (int16_t *)qam256_table;
+            mod_name = "256-QAM";
+            table_size = 256;
+            break;
+        default:
+            printf("Error: Invalid modulation order %u (must be 2, 4, 6, or 8)\n", modulation_order);
+            return;
+    }
+    
+    uint32_t num_symbols = length / modulation_order;
+    
+    printf("=== Starting NR Modulation test: %s ===\n", mod_name);
+    printf("Parameters: mod_order=%u, length=%u bits, num_symbols=%u\n", 
+           modulation_order, length, num_symbols);
+    printf("Running %d iterations...\n", num_iterations);
+    
+    /* Allocate aligned buffers */
+    const size_t out_sz = num_symbols * sizeof(int16_t) * 2;
     const size_t in_sz = ((length + 31) / 32) * sizeof(uint32_t);
     
     uint32_t *in = aligned_alloc(32, in_sz);
@@ -464,70 +595,58 @@ void nr_modulation_test()
     
     memset(out, 0, out_sz);
     
-    /* Process each modulation order */
-    for (int mod_idx = 0; mod_idx < 4; mod_idx++) {
-        uint32_t mod_bits = bits_per_mod[mod_idx];
-        const char *mod_name = mod_names[mod_idx];
-        const int16_t *mod_table = tables[mod_idx];
-        uint32_t table_size = table_sizes[mod_idx];
-        uint32_t num_symbols = length / mod_bits;
-        
-        printf("\n=== Testing %s (mod_order=%u, %u symbols per iteration) ===\n", 
-               mod_name, mod_bits, num_symbols);
-        printf("Running %d iterations...\n", num_iterations);
-        
-        /* Main modulation loop */
-        for (int iter = 0; iter < num_iterations; iter++) {
-            /* Generate test pattern: alternate between 0x55555555 and 0xAAAAAAAA */
-            uint32_t pattern = (iter % 2) ? 0x55555555 : 0xAAAAAAAA;
-            size_t n_words = in_sz / sizeof(uint32_t);
-            for (uint32_t i = 0; i < n_words; i++) {
-                in[i] = pattern ^ (i * 0x11111111);
-            }
-            
-            /* Manual modulation: extract mod_bits at a time and map to constellation */
-            int16_t *out_ptr = out;
-            uint8_t *in_bytes = (uint8_t *)in;
-            uint32_t bit_mask = (1 << mod_bits) - 1;      /* Mask for mod_bits bits */
-            
-            for (uint32_t i = 0; i < num_symbols; i++) {
-                /* Extract mod_bits bits from input */
-                uint32_t byte_idx = (i * mod_bits) / 8;
-                uint32_t bit_offset = (i * mod_bits) & 0x7;
-                uint32_t symbol_idx = (in_bytes[byte_idx] >> bit_offset) & bit_mask;
-                
-                /* Wrap index if it exceeds table size (shouldn't happen with proper masks) */
-                symbol_idx = symbol_idx % table_size;
-                
-                /* Map to constellation table */
-                *out_ptr++ = mod_table[symbol_idx * 2 + 0];      /* I component */
-                *out_ptr++ = mod_table[symbol_idx * 2 + 1];      /* Q component */
-            }
-            
-            if ((iter % 10) == 0) {
-                printf("  iter %3d: out[0..7]=[%6d, %6d, %6d, %6d, %6d, %6d, %6d, %6d]\n", 
-                       iter,
-                       out[0], out[1], out[2], out[3],
-                       out[4], out[5], out[6], out[7]);
-            }
+    /* Main modulation loop */
+    for (int iter = 0; iter < num_iterations; iter++) {
+        /* Generate test pattern: alternate between 0x55555555 and 0xAAAAAAAA */
+        uint32_t pattern = (iter % 2) ? 0x55555555 : 0xAAAAAAAA;
+        size_t n_words = in_sz / sizeof(uint32_t);
+        for (uint32_t i = 0; i < n_words; i++) {
+            in[i] = pattern ^ (i * 0x11111111);
         }
         
-        /* Print constellation for this modulation order */
-        printf("\n%s constellation points (first 8 of %u):\n", mod_name, table_size);
-        for (uint32_t idx = 0; idx < 8 && idx < table_size; idx++) {
-            printf("  Symbol[%2u]: I=%7d, Q=%7d\n", 
-                   idx, 
-                   mod_table[idx * 2 + 0], 
-                   mod_table[idx * 2 + 1]);
+        /* Manual modulation: extract mod_order bits at a time and map to constellation */
+        int16_t *out_ptr = out;
+        uint8_t *in_bytes = (uint8_t *)in;
+        uint32_t bit_mask = (1 << modulation_order) - 1;      /* Mask for modulation_order bits */
+        
+        for (uint32_t i = 0; i < num_symbols; i++) {
+            /* Extract modulation_order bits from input */
+            uint32_t byte_idx = (i * modulation_order) / 8;
+            uint32_t bit_offset = (i * modulation_order) & 0x7;
+            uint32_t symbol_idx = (in_bytes[byte_idx] >> bit_offset) & bit_mask;
+            
+            /* Wrap index if it exceeds table size (shouldn't happen with proper masks) */
+            symbol_idx = symbol_idx % table_size;
+            
+            /* Map to constellation table */
+            *out_ptr++ = mod_table[symbol_idx * 2 + 0];      /* I component */
+            *out_ptr++ = mod_table[symbol_idx * 2 + 1];      /* Q component */
         }
-        if (table_size > 8) {
-            printf("  ... (%u more points)\n", table_size - 8);
+        
+        if ((iter % 100) == 0) {
+            printf("  iter %6d: out[0..7]=[%6d, %6d, %6d, %6d, %6d, %6d, %6d, %6d]\n", 
+                   iter,
+                   out[0], out[1], out[2], out[3],
+                   out[4], out[5], out[6], out[7]);
         }
+    }
+    
+    /* Print constellation points */
+    printf("\n%s constellation points (first 16 of %u):\n", mod_name, table_size);
+    int print_limit = table_size < 16 ? table_size : 16;
+    for (int idx = 0; idx < print_limit; idx++) {
+        printf("  Symbol[%2u]: I=%7d, Q=%7d\n", 
+               idx, 
+               mod_table[idx * 2 + 0], 
+               mod_table[idx * 2 + 1]);
+    }
+    if (table_size > 16) {
+        printf("  ... (%u more points)\n", table_size - 16);
     }
     
     free(in);
     free(out);
-    printf("\n=== NR Modulation tests completed (all 4 modulation orders) ===\n");
+    printf("\n=== NR Modulation test completed (%s) ===\n", mod_name);
 }
 
 void nr_layermapping()
@@ -537,13 +656,19 @@ void nr_layermapping()
     
     printf("=== Starting NR Layer Mapping tests ===\n");
     
-    /* Layer mapping parameters */
+    /* Layer mapping parameters - primary parameter is n_symbs */
+    const uint32_t n_symbs = 82368;         /* Number of symbols (configurable) */
     const int nbCodes = 1;                  /* 1 codeword */
-    const int encoded_len = 512;            /* Encoded symbols length */
     const uint8_t n_layers = 2;             /* 2 layers (MIMO) */
-    const int layerSz = 512;                /* Layer symbol size */
-    const uint32_t n_symbs = 512;           /* Number of symbols */
-    const int num_iterations = 50;          /* 50 iterations */
+    const int num_iterations = 1000000;     /* Number of test runs */
+    
+    /* Derived parameters based on n_symbs */
+    const int encoded_len = n_symbs;        /* Encoded symbols length = n_symbs */
+    const int layerSz = n_symbs / n_layers; /* Layer symbol size = n_symbs / n_layers */
+    
+    printf("Parameters: n_symbs=%u, n_layers=%u, encoded_len=%d, layerSz=%d\n",
+           n_symbs, n_layers, encoded_len, layerSz);
+    printf("Running %d iterations...\n", num_iterations);
     
     /* Allocate modulated symbols buffer (aligned) */
     c16_t (*mod_symbs)[nbCodes][encoded_len] = aligned_alloc(64, sizeof(c16_t) * nbCodes * encoded_len);
@@ -560,10 +685,6 @@ void nr_layermapping()
     
     memset(mod_symbs, 0, sizeof(c16_t) * nbCodes * encoded_len);
     memset(tx_layers, 0, sizeof(c16_t) * n_layers * layerSz);
-    
-    printf("Layer mapping loop: %d codewords, %d layers, %u symbols per iteration\n", 
-           nbCodes, n_layers, n_symbs);
-    printf("Running %d iterations...\n", num_iterations);
     
     /* Main layer mapping loop */
     for (int iter = 0; iter < num_iterations; iter++) {
@@ -590,8 +711,8 @@ void nr_layermapping()
             (c16_t (*)[layerSz])(*tx_layers)        /* output tx_layers - cast to proper array pointer */
         );
         
-        if ((iter % 10) == 0) {
-            printf("  iter %3d: tx_layer[0][0..7]=[(%6d,%6d), (%6d,%6d), (%6d,%6d), (%6d,%6d)]\n", 
+        if ((iter % 100) == 0) {
+            printf("  iter %6d: tx_layer[0][0..3]=[(%6d,%6d), (%6d,%6d), (%6d,%6d), (%6d,%6d)]\n", 
                    iter,
                    (*tx_layers)[0][0].r, (*tx_layers)[0][0].i,
                    (*tx_layers)[0][1].r, (*tx_layers)[0][1].i,
@@ -625,10 +746,10 @@ void nr_ldpc()
     
     /* LDPC encoder parameters */
     const int BG = 1;                       /* Base Graph 1 (default) */
-    const int Zc = 256;                     /* Lifting size (must be valid for BG1) */
+    const int Zc = 384;                     /* Lifting size (must be valid for BG1) */
     const int Kb = 22;                      /* Information bit columns */
     const int K = Kb * Zc;                  /* Total information bits */
-    const int num_iterations = 10;          /* Reduced iterations for LDPC (slower) */
+    const int num_runs = 1000000;                /* Number of test runs */
     const int n_segments = 1;               /* Single transport block segment */
     
     /* Calculate code rate and output size */
@@ -643,7 +764,7 @@ void nr_ldpc()
     
     printf("LDPC parameters: BG=%d, Zc=%d, Kb=%d, K=%d bits\n", BG, Zc, Kb, K);
     printf("Output size: %d bytes (buffer: %d bytes)\n", output_length, output_buffer_size);
-    printf("Running %d iterations...\n", num_iterations);
+    printf("Running %d test runs...\n", num_runs);
     
     /* Allocate input buffer - only for the single segment we need */
     uint8_t *input_seg = malloc((K + 7) / 8);
@@ -679,10 +800,10 @@ void nr_ldpc()
         .tparity = NULL
     };
     
-    printf("Starting LDPC encoding loop...\n");
+    printf("Starting LDPC encoding test loop...\n");
     
     /* Main LDPC encoding loop */
-    for (int iter = 0; iter < num_iterations; iter++) {
+    for (int iter = 0; iter < num_runs; iter++) {
         /* Fill input buffer with test pattern - varies per iteration */
         uint32_t pattern = (iter % 2) ? 0x55 : 0xAA;
         
@@ -700,7 +821,7 @@ void nr_ldpc()
         }
         
         if (result != 0) {
-            printf("ERROR: LDPCencoder failed at iteration %d\n", iter);
+            printf("ERROR: LDPCencoder failed at run %d\n", iter);
         }
     }
     
