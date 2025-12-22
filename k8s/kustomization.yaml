@@ -5,13 +5,13 @@ namespace: oai-isolation
 
 resources:
   - namespace.yaml
-  - gnb-crc-deployment.yaml
-  - gnb-layer-map-deployment.yaml
-  - gnb-ldpc-deployment.yaml
-  - gnb-modulation-deployment.yaml
-  - gnb-ofdm-mod-deployment.yaml
-  - gnb-precoding-deployment.yaml
-  - gnb-scramble-deployment.yaml
+  - ../containers/gnb/crc/gnb-crc-deployment.yaml
+  - ../containers/gnb/layer_map/gnb-layer-map-deployment.yaml
+  - ../containers/gnb/ldpc/gnb-ldpc-deployment.yaml
+  - ../containers/gnb/modulation/gnb-modulation-deployment.yaml
+  - ../containers/gnb/ofdm_mod/gnb-ofdm-mod-deployment.yaml
+  - ../containers/gnb/precoding/gnb-precoding-deployment.yaml
+  - ../containers/gnb/scramble/gnb-scramble-deployment.yaml
   - ue-ch-est-deployment.yaml
   - ue-ch-mmse-deployment.yaml
   - ue-check-crc-deployment.yaml
@@ -21,9 +21,10 @@ resources:
   - ue-ofdm-demod-deployment.yaml
   - ue-soft-demod-deployment.yaml
 
-commonLabels:
-  project: oai-isolation
-  managed-by: kustomize
+labels:
+  - pairs:
+      project: oai-isolation
+      managed-by: kustomize
 
 commonAnnotations:
   description: "OAI Isolation microservices for 5G signal processing"

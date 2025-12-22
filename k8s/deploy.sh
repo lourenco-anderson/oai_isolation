@@ -37,17 +37,17 @@ fi
 echo -e "${GREEN}✓ Connected to cluster${NC}"
 echo ""
 
-# Verificar se Kustomize está disponível
-if ! command -v kustomize &> /dev/null; then
-    echo -e "${YELLOW}Kustomize not found, attempting with kubectl kustomize support...${NC}"
-    KUSTOMIZE_CMD="kubectl kustomize"
+# Verificar se Kustomize está disponível e preparar comando com permissões de carga
+if command -v kustomize &> /dev/null; then
+    KUSTOMIZE_BUILD_CMD=(kustomize build --load-restrictor=LoadRestrictionsNone "$SCRIPT_DIR")
 else
-    KUSTOMIZE_CMD="kustomize"
+    echo -e "${YELLOW}Kustomize not found, attempting with kubectl kustomize support...${NC}"
+    KUSTOMIZE_BUILD_CMD=(kubectl kustomize --load-restrictor=LoadRestrictionsNone "$SCRIPT_DIR")
 fi
 
 # Deploy usando Kustomize
 echo -e "${YELLOW}Applying Kustomize manifests...${NC}"
-if $KUSTOMIZE_CMD "$SCRIPT_DIR" | kubectl apply -f -; then
+if eval "${KUSTOMIZE_BUILD_CMD[@]}" | kubectl apply -f -; then
     echo -e "${GREEN}✓ Successfully deployed manifests${NC}"
 else
     echo -e "${RED}✗ Failed to deploy manifests${NC}"
