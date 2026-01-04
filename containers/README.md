@@ -82,13 +82,15 @@ extraEnvVars:
   KEPLER_LOG_LEVEL: "5"
   ENABLE_GPU: "false"
   ENABLE_QAT: "false"
-  ENABLE_EBPF_CGROUPID: "false"
-  EXPOSE_HW_COUNTER_METRICS: "false"
-  EXPOSE_IRQ_COUNTER_METRICS: "false"
+  ENABLE_EBPF_CGROUPID: "true"
+  EXPOSE_HW_COUNTER_METRICS: "true"
+  EXPOSE_IRQ_COUNTER_METRICS: "true"
   EXPOSE_CGROUP_METRICS: "true"
-  ENABLE_PROCESS_METRICS: "false"
-  EXPOSE_BPF_METRICS: "false"
+  ENABLE_PROCESS_METRICS: "true"
+  EXPOSE_BPF_METRICS: "true"
   EXPOSE_COMPONENT_POWER: "true"
+  RAPL_ENABLED: "true"
+  EXPOSE_RAPL_METRICS: "true"
 
 serviceMonitor:
   enabled: true
@@ -111,15 +113,16 @@ readinessProbe:
 
 resources:
   limits:
-    memory: 512Mi
-    cpu: 1000m
+    memory: 1Gi
+    cpu: 2000m
   requests:
-    memory: 256Mi
-    cpu: 100m
+    memory: 512Mi
+    cpu: 500m
 
 hostNetwork: true
 securityContext:
   privileged: true
+
 EOF
 ```
 

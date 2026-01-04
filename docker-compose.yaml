@@ -1,0 +1,109 @@
+version: "3.9"
+
+services:
+  # gNB components
+  gnb-crc:
+    image: oai-gnb-crc:latest
+    container_name: gnb-crc
+    build:
+      context: .
+      dockerfile: containers/gnb/crc/Dockerfile
+
+  gnb-layer-map:
+    image: oai-gnb-layer-map:latest
+    container_name: gnb-layer-map
+    build:
+      context: .
+      dockerfile: containers/gnb/layer_map/Dockerfile
+
+  gnb-ldpc:
+    image: oai-gnb-ldpc:latest
+    container_name: gnb-ldpc
+    build:
+      context: .
+      dockerfile: containers/gnb/ldpc/Dockerfile
+
+  gnb-modulation:
+    image: oai-gnb-modulation:latest
+    container_name: gnb-modulation
+    build:
+      context: .
+      dockerfile: containers/gnb/modulation/Dockerfile
+
+  gnb-ofdm-mod:
+    image: oai-gnb-ofdm-mod:latest
+    container_name: gnb-ofdm-mod
+    build:
+      context: .
+      dockerfile: containers/gnb/ofdm_mod/Dockerfile
+
+  gnb-precoding:
+    image: oai-gnb-precoding:latest
+    container_name: gnb-precoding
+    build:
+      context: .
+      dockerfile: containers/gnb/precoding/Dockerfile
+
+  gnb-scramble:
+    image: oai-gnb-scramble:latest
+    container_name: gnb-scramble
+    build:
+      context: .
+      dockerfile: containers/gnb/scramble/Dockerfile
+
+  # UE components
+  ue-ch-est:
+    image: oai-ue-ch-est:latest
+    container_name: ue-ch-est
+    build:
+      context: .
+      dockerfile: containers/ue/ch_est/Dockerfile
+
+  ue-ch-mmse:
+    image: oai-ue-ch-mmse:latest
+    container_name: ue-ch-mmse
+    build:
+      context: .
+      dockerfile: containers/ue/ch_mmse/Dockerfile
+
+  ue-check-crc:
+    image: oai-ue-check-crc:latest
+    container_name: ue-check-crc
+    build:
+      context: .
+      dockerfile: containers/ue/check_crc/Dockerfile
+
+  ue-descrambling:
+    image: oai-ue-descrambling:latest
+    container_name: ue-descrambling
+    build:
+      context: .
+      dockerfile: containers/ue/descrambling/Dockerfile
+
+  ue-layer-demap:
+    image: oai-ue-layer-demap:latest
+    container_name: ue-layer-demap
+    build:
+      context: .
+      dockerfile: containers/ue/layer_demap/Dockerfile
+
+  ue-ldpc-dec:
+    image: oai-ue-ldpc-dec:latest
+    container_name: ue-ldpc-dec
+    build:
+      context: .
+      dockerfile: containers/ue/ldpc_dec/Dockerfile
+
+  ue-ofdm-demod:
+    image: oai-ue-ofdm-demod:latest
+    container_name: ue-ofdm-demod
+    build:
+      context: .
+      dockerfile: containers/ue/ofdm_demod/Dockerfile
+
+  ue-soft-demod:
+    image: oai-ue-soft-demod:latest
+    container_name: ue-soft-demod
+    build:
+      context: .
+      dockerfile: containers/ue/soft_demod/Dockerfile
