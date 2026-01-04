@@ -394,7 +394,7 @@ void nr_scramble(){
     };
     memcpy(in, sample, sizeof(sample) < in_bytes ? sizeof(sample) : in_bytes);
     
-    const int iterations = getenv_int("OAI_ITERS", 1000);
+    const int iterations = getenv_int("OAI_ITERS", 1000000000);
     const int verbose = getenv("OAI_VERBOSE") != NULL;
 
     printf("Starting scrambling tests (%d iterations)...\n", iterations);
@@ -868,7 +868,7 @@ void nr_ch_estimation()
     const int ofdm_symbol_size = 2048;      /* FFT size (use 2048 to fit 106 PRBs) */
     const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
-    const int num_iterations = getenv_int("OAI_ITERS", 100); /* lighter default */
+    const int num_iterations = getenv_int("OAI_ITERS", 10000000000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int snr_db = getenv_int("OAI_SNR", 20); /* SNR in dB (higher = cleaner signal) */
     
@@ -1762,7 +1762,7 @@ void nr_ldpc_dec()
     const uint8_t R = 13;                       /* Decoding rate 1/3 */
     const uint8_t numMaxIter = 6;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
-    const int num_iterations = getenv_int("OAI_ITERS", 100); /* Allow fast smoke tests */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000000); /* Allow fast smoke tests */
     const int snr_db = getenv_int("OAI_SNR", 10);             /* BPSK Eb/N0 in dB (high by default) */
     
         printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
