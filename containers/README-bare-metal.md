@@ -13,6 +13,15 @@ Guia para habilitar métricas completas de energia (RAPL/PMU) e eBPF em bare met
   - `mount -t bpf bpf /sys/fs/bpf`
   - `mount -t debugfs none /sys/kernel/debug`
 - Certifique-se de que `/lib/modules` e `/usr/src` existem e correspondem ao kernel em uso.
+```bash
+echo "[kernel] $(uname -r)"; \
+for bin in curl jq helm kubectl docker conntrack socat; do command -v $bin >/dev/null && echo "[ok] $bin" || echo "[faltando] $bin"; done; \
+echo "[headers] /lib/modules/$(uname -r):" $(ls /lib/modules/$(uname -r) 2>/dev/null | wc -l) "entradas"; \
+echo "[sysctl] perf_event_paranoid=$(sysctl -n kernel.perf_event_paranoid 2>/dev/null)"; \
+echo "[sysctl] kptr_restrict=$(sysctl -n kernel.kptr_restrict 2>/dev/null)"; \
+mount | grep -E "bpf|debugfs" | sed 's/^/[mount] /'
+```
+
 
 ## 1. Ambiente Kubernetes (escolha 1)
 ### Opção A: Minikube (driver none, bare metal)
@@ -328,3 +337,29 @@ kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kep
 - Se Kepler falhar em iniciar: verifique mounts (`/sys/fs/bpf`, `/sys/kernel/debug`), sysctls (`perf_event_paranoid`, `kptr_restrict`) e permissões do daemonset (privileged/hostPID/hostNetwork).
 - Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
 - Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
+
+## 11. Desativar/limpar o cluster
+
+### Minikube (driver none)
+```bash
+sudo minikube stop
+sudo minikube delete --all --purge
+```
+
+### kubeadm (host único)
+```bash
+sudo kubeadm reset -f
+sudo systemctl stop kubelet
+sudo systemctl stop containerd || true
+sudo rm -rf /etc/cni/net.d /var/lib/cni /var/lib/kubelet /var/lib/etcd /var/lib/containerd /var/run/kubernetes
+sudo ip link delete cni0     2>/dev/null || true
+sudo ip link delete flannel.1 2>/dev/null || true
+sudo ip link delete kube-ipvs0 2>/dev/null || true
+```
+
+### Namespaces/Helm releases (se quiser apenas remover workloads)
+```bash
+helm uninstall kepler prometheus grafana -n monitoring || true
+helm uninstall kepler -n kepler || true
+kubectl delete namespace kepler monitoring || true
+```
