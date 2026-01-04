@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-ldpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-ldpc
+  template:
+    metadata:
+      labels:
+        app: my-ldpc
+    spec:
+      containers:
+        - name: my-ldpc
+          image: my-ldpc:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
