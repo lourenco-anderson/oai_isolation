@@ -39,43 +39,43 @@ fi
 case "$ACTION" in
     create)
         echo -e "${YELLOW}Creating Kind cluster: $CLUSTER_NAME${NC}"
-        
+
         # Criar config para Kind cluster com registry local
         cat > /tmp/kind-config.yaml <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: $CLUSTER_NAME
 nodes:
-  - role: control-plane
-    ports:
-      - containerPort: 80
-        hostPort: 80
-        protocol: TCP
-      - containerPort: 443
-        hostPort: 443
-        protocol: TCP
-  - role: worker
-  - role: worker
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+- role: worker
+- role: worker
 EOF
-        
+
         kind create cluster --config /tmp/kind-config.yaml
-        
+
         echo -e "${GREEN}✓ Cluster created successfully${NC}"
         echo ""
         echo -e "${YELLOW}Setting kubectl context...${NC}"
         kubectl cluster-info --context kind-$CLUSTER_NAME
         echo -e "${GREEN}✓ Context configured${NC}"
         ;;
-        
+
     delete)
         echo -e "${YELLOW}Deleting Kind cluster: $CLUSTER_NAME${NC}"
         kind delete cluster --name $CLUSTER_NAME
         echo -e "${GREEN}✓ Cluster deleted${NC}"
         ;;
-        
+
     status)
         echo -e "${YELLOW}Checking Kind cluster status...${NC}"
-        
+
         if kind get clusters | grep -q $CLUSTER_NAME; then
             echo -e "${GREEN}✓ Cluster exists: $CLUSTER_NAME${NC}"
             echo ""
@@ -89,7 +89,7 @@ EOF
             kind get clusters
         fi
         ;;
-        
+
     *)
         echo -e "${RED}Invalid action: $ACTION${NC}"
         echo "Usage: $0 [create|delete|status]"

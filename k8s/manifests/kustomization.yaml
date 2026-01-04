@@ -5,28 +5,27 @@ namespace: oai-isolation
 
 # Paths relativos aos novos locais dos manifests
 resources:
-  - manifests/namespace.yaml
-  - manifests/services/gnb-services.yaml
-  - manifests/services/ue-services.yaml
-  - manifests/deployments/gnb/gnb-crc.yaml
-  - manifests/deployments/gnb/gnb-layer-map.yaml
-  - manifests/deployments/gnb/gnb-ldpc.yaml
-  - manifests/deployments/gnb/gnb-modulation.yaml
-  - manifests/deployments/gnb/gnb-ofdm-mod.yaml
-  - manifests/deployments/gnb/gnb-precoding.yaml
-  - manifests/deployments/gnb/gnb-scramble.yaml
-  - manifests/deployments/ue/ue-ch-est-deployment.yaml
-  - manifests/deployments/ue/ue-ch-mmse-deployment.yaml
-  - manifests/deployments/ue/ue-check-crc-deployment.yaml
-  - manifests/deployments/ue/ue-descrambling-deployment.yaml
-  - manifests/deployments/ue/ue-layer-demap-deployment.yaml
-  - manifests/deployments/ue/ue-ldpc-dec-deployment.yaml
-  - manifests/deployments/ue/ue-ofdm-demod-deployment.yaml
-  - manifests/deployments/ue/ue-soft-demod-deployment.yaml
+  - namespace.yaml
+  - deployments/gnb/gnb-crc.yaml
+  - deployments/gnb/gnb-layer-map.yaml
+  - deployments/gnb/gnb-ldpc.yaml
+  - deployments/gnb/gnb-modulation.yaml
+  - deployments/gnb/gnb-ofdm-mod.yaml
+  - deployments/gnb/gnb-precoding.yaml
+  - deployments/gnb/gnb-scramble.yaml
+  - deployments/ue/ue-ch-est-deployment.yaml
+  - deployments/ue/ue-ch-mmse-deployment.yaml
+  - deployments/ue/ue-check-crc-deployment.yaml
+  - deployments/ue/ue-descrambling-deployment.yaml
+  - deployments/ue/ue-layer-demap-deployment.yaml
+  - deployments/ue/ue-ldpc-dec-deployment.yaml
+  - deployments/ue/ue-ofdm-demod-deployment.yaml
+  - deployments/ue/ue-soft-demod-deployment.yaml
 
 labels:
-  project: oai-isolation
-  managed-by: kustomize
+  - pairs:
+      project: oai-isolation
+      managed-by: kustomize
 
-annotations:
+commonAnnotations:
   description: "OAI Isolation microservices for 5G signal processing"

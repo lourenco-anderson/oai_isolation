@@ -7,7 +7,8 @@ set -e
 
 REGISTRY=${1:-localhost:5000}
 TAG=${2:-latest}
-REPO_ROOT=$(cd "$(dirname "$0")/../" && pwd)
+# Repo raiz (2 níveis acima: k8s/scripts -> repo)
+REPO_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 
 echo "=========================================="
 echo "Building OAI Isolation Docker Images"
