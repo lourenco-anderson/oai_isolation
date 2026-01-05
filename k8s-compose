@@ -1,0 +1,545 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-crc
+    name: gnb-crc
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-crc
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-crc
+      spec:
+        containers:
+        - image: oai-gnb-crc:latest
+          imagePullPolicy: ""
+          name: gnb-crc
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-layer-map
+    name: gnb-layer-map
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-layer-map
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-layer-map
+      spec:
+        containers:
+        - image: oai-gnb-layer-map:latest
+          imagePullPolicy: ""
+          name: gnb-layer-map
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-ldpc
+    name: gnb-ldpc
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-ldpc
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-ldpc
+      spec:
+        containers:
+        - image: oai-gnb-ldpc:latest
+          imagePullPolicy: ""
+          name: gnb-ldpc
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-modulation
+    name: gnb-modulation
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-modulation
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-modulation
+      spec:
+        containers:
+        - image: oai-gnb-modulation:latest
+          imagePullPolicy: ""
+          name: gnb-modulation
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-ofdm-mod
+    name: gnb-ofdm-mod
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-ofdm-mod
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-ofdm-mod
+      spec:
+        containers:
+        - image: oai-gnb-ofdm-mod:latest
+          imagePullPolicy: ""
+          name: gnb-ofdm-mod
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-precoding
+    name: gnb-precoding
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-precoding
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-precoding
+      spec:
+        containers:
+        - image: oai-gnb-precoding:latest
+          imagePullPolicy: ""
+          name: gnb-precoding
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: gnb-scramble
+    name: gnb-scramble
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: gnb-scramble
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: gnb-scramble
+      spec:
+        containers:
+        - image: oai-gnb-scramble:latest
+          imagePullPolicy: ""
+          name: gnb-scramble
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-ch-est
+    name: ue-ch-est
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-ch-est
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-ch-est
+      spec:
+        containers:
+        - image: oai-ue-ch-est:latest
+          imagePullPolicy: ""
+          name: ue-ch-est
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-ch-mmse
+    name: ue-ch-mmse
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-ch-mmse
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-ch-mmse
+      spec:
+        containers:
+        - image: oai-ue-ch-mmse:latest
+          imagePullPolicy: ""
+          name: ue-ch-mmse
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-check-crc
+    name: ue-check-crc
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-check-crc
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-check-crc
+      spec:
+        containers:
+        - image: oai-ue-check-crc:latest
+          imagePullPolicy: ""
+          name: ue-check-crc
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-descrambling
+    name: ue-descrambling
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-descrambling
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-descrambling
+      spec:
+        containers:
+        - image: oai-ue-descrambling:latest
+          imagePullPolicy: ""
+          name: ue-descrambling
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-layer-demap
+    name: ue-layer-demap
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-layer-demap
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-layer-demap
+      spec:
+        containers:
+        - image: oai-ue-layer-demap:latest
+          imagePullPolicy: ""
+          name: ue-layer-demap
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-ldpc-dec
+    name: ue-ldpc-dec
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-ldpc-dec
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-ldpc-dec
+      spec:
+        containers:
+        - image: oai-ue-ldpc-dec:latest
+          imagePullPolicy: ""
+          name: ue-ldpc-dec
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-ofdm-demod
+    name: ue-ofdm-demod
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-ofdm-demod
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-ofdm-demod
+      spec:
+        containers:
+        - image: oai-ue-ofdm-demod:latest
+          imagePullPolicy: ""
+          name: ue-ofdm-demod
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+        -o k8s-compose
+      kompose.version: 1.21.0 (992df58d8)
+    creationTimestamp: null
+    labels:
+      io.kompose.service: ue-soft-demod
+    name: ue-soft-demod
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        io.kompose.service: ue-soft-demod
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          kompose.cmd: /snap/kompose/19/kompose-linux-amd64 convert -f docker-compose.yaml
+            -o k8s-compose
+          kompose.version: 1.21.0 (992df58d8)
+        creationTimestamp: null
+        labels:
+          io.kompose.service: ue-soft-demod
+      spec:
+        containers:
+        - image: oai-ue-soft-demod:latest
+          imagePullPolicy: ""
+          name: ue-soft-demod
+          resources: {}
+        restartPolicy: Always
+        serviceAccountName: ""
+        volumes: null
+  status: {}
+kind: List
+metadata: {}
+

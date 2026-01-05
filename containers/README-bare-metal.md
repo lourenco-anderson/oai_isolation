@@ -238,10 +238,17 @@ kubectl rollout status deployment grafana -n monitoring --timeout=3m
 
 ### 6.1 Imagem única a partir de Dockerfile
 ```bash
-# Na raiz do seu projeto
+# Na raiz do seu projeto (com podman ou docker)
+podman build -t local/app:latest -f Dockerfile .
+# ou
 docker build -t local/app:latest -f Dockerfile .
 
-# Se estiver em minikube (driver none, bare metal), carregue a imagem
+# Para kubeadm com containerd, importe diretamente
+podman save local/app:latest | sudo ctr -n k8s.io images import -
+# ou se usar docker
+docker save local/app:latest | sudo ctr -n k8s.io images import -
+
+# Se estiver em minikube (driver none, bare metal)
 minikube image load local/app:latest
 
 # Aplicar Deployment/Service
@@ -284,17 +291,66 @@ kubectl apply -f /tmp/app.yaml
 
 ### 6.2 Múltiplos contêineres (docker-compose)
 Opções:
-- **kompose**: converte `docker-compose.yml` para manifests Kubernetes rapidamente.
-  ```bash
-  kompose convert -f docker-compose.yml -o k8s-compose/
-  kubectl apply -f k8s-compose/
-  ```
-- **Helm chart simples**: crie um chart com múltiplos Deployments/Services; facilita versionar valores.
-- **Execução fora do cluster**: se preferir manter docker-compose no host, ele não será monitorado pelo Kepler dentro do cluster; para ser monitorado, traga os contêineres como Deployments/DaemonSets no Kubernetes.
+
+**A. Build com podman (recomendado para kubeadm + containerd):**
+```bash
+# Build todas as imagens com podman
+for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
+  component=$(basename $(dirname $dockerfile))
+  side=$(basename $(dirname $(dirname $dockerfile)))
+  podman build -t oai-${side}-${component}:latest -f $dockerfile .
+done
+
+# Listar imagens criadas
+podman images | grep oai
+
+# Importar todas para containerd (k8s.io namespace)
+for img in $(podman images --format "{{.Repository}}:{{.Tag}}" | grep oai); do
+  podman save $img | sudo ctr -n k8s.io images import -
+done
+
+# Criar manifests Kubernetes manualmente ou usar os gerados em k8s-manifests/
+kubectl apply -f k8s-manifests/
+```
+
+**B. Usar docker-compose (requer Docker daemon):**
+```bash
+# Iniciar Docker daemon
+sudo systemctl start docker
+
+# Build com docker-compose
+docker-compose build
+
+# Importar para containerd
+for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep oai); do
+  docker save $img | sudo ctr -n k8s.io images import -
+done
+
+# Aplicar manifests
+kubectl apply -f k8s-manifests/
+```
+
+**C. Conversão com kompose:**
+```bash
+kompose convert -f docker-compose.yml -o k8s-compose/
+kubectl apply -f k8s-compose/
+```
+
+**Importante:** Use `imagePullPolicy: Never` nos Deployments para forçar uso das imagens locais importadas no containerd.
 
 ### 6.3 Registro de imagens
-- Bare metal/kubeadm: suba um registro local (ex.: `registry:2` em `localhost:5000`) e use `imagePullPolicy: IfNotPresent`.
-- Minikube: preferir `minikube image load` para evitar push/pull.
+**Kubeadm + containerd (recomendado):**
+- Build com podman/docker e importe diretamente: `podman save IMAGE | sudo ctr -n k8s.io images import -`
+- Use `imagePullPolicy: Never` ou `IfNotPresent` nos manifests
+- Verifique imagens no containerd: `sudo ctr -n k8s.io images ls | grep oai`
+
+**Minikube (driver none):**
+- Use `minikube image load IMAGE` após build
+
+**Registry local (opcional):**
+- Suba um registry: `docker run -d -p 5000:5000 --restart=always --name registry registry:2`
+- Tag e push: `podman tag IMAGE localhost:5000/IMAGE && podman push localhost:5000/IMAGE --tls-verify=false`
+- Configure containerd para registry inseguro se necessário
 
 ### 6.4 Dicas rápidas
 - Sempre ajustar `resources.requests/limits` para aparecer em métricas de scheduling e consumo.
@@ -308,7 +364,110 @@ kubectl port-forward -n monitoring svc/prometheus-server 9091:80
 ```
 Credenciais Grafana: `admin / admin123`.
 
-## 7. Validação rápida
+## 7. Atualizar imagens após mudanças no código-fonte
+
+Quando modificar arquivos em `src/`, siga este fluxo para reconstruir e atualizar os containers no cluster:
+
+### 7.1 Rebuild das imagens afetadas
+```bash
+# Identificar componentes afetados pela mudança
+# Exemplo: se mudou src/nr_dlsch_onelayer.c (usado pelo gnb-ldpc)
+
+# Rebuild da imagem específica
+cd /home/anderson/dev/oai_isolation
+podman build -t oai-gnb-ldpc:latest -f containers/gnb/ldpc/Dockerfile .
+
+# Ou rebuild de múltiplas imagens
+for component in ldpc modulation; do
+  podman build -t oai-gnb-${component}:latest -f containers/gnb/${component}/Dockerfile .
+done
+```
+
+### 7.2 Importar imagens atualizadas para containerd
+```bash
+# Import única
+podman save oai-gnb-ldpc:latest | sudo ctr -n k8s.io images import -
+
+# Ou import de múltiplas
+for img in oai-gnb-ldpc oai-gnb-modulation; do
+  podman save ${img}:latest | sudo ctr -n k8s.io images import -
+done
+
+# Verificar import
+sudo ctr -n k8s.io images ls | grep oai-gnb-ldpc
+```
+
+### 7.3 Forçar restart dos pods para usar nova imagem
+```bash
+# Opção A: Delete o pod (Deployment recria automaticamente)
+kubectl delete pod -l app=gnb-ldpc
+
+# Opção B: Rollout restart do Deployment
+kubectl rollout restart deployment gnb-ldpc
+
+# Opção C: Restart de múltiplos deployments
+kubectl rollout restart deployment gnb-ldpc gnb-modulation
+
+# Verificar status do rollout
+kubectl rollout status deployment gnb-ldpc
+```
+
+### 7.4 Verificar nova versão rodando
+```bash
+# Ver logs do novo pod
+kubectl logs -l app=gnb-ldpc --tail=50
+
+# Verificar hash da imagem no pod
+kubectl get pod -l app=gnb-ldpc -o jsonpath='{.items[0].status.containerStatuses[0].imageID}'
+
+# Comparar com hash no containerd
+sudo ctr -n k8s.io images ls | grep oai-gnb-ldpc
+```
+
+### 7.5 Rebuild completo (todas as imagens)
+```bash
+# Rebuild todas
+for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
+  component=$(basename $(dirname $dockerfile))
+  side=$(basename $(dirname $(dirname $dockerfile)))
+  echo "Building oai-${side}-${component}..."
+  podman build -t oai-${side}-${component}:latest -f $dockerfile .
+done
+
+# Import todas
+for img in $(podman images --format "{{.Repository}}:{{.Tag}}" | grep oai); do
+  echo "Importing $img..."
+  podman save $img | sudo ctr -n k8s.io images import -
+done
+
+# Restart todos os deployments OAI
+kubectl rollout restart deployment -l component=gnb
+kubectl rollout restart deployment -l component=ue
+
+# Aguardar conclusão
+kubectl rollout status deployment --all --timeout=5m
+```
+
+### 7.6 Troubleshooting de atualizações
+```bash
+# Se pod não pegar nova imagem, verificar:
+# 1. imagePullPolicy deve ser Never ou IfNotPresent
+kubectl get deployment gnb-ldpc -o yaml | grep imagePullPolicy
+
+# 2. Verificar se imagem foi importada com sucesso
+sudo ctr -n k8s.io images ls | grep oai-gnb-ldpc
+
+# 3. Forçar remoção do pod antigo
+kubectl delete pod -l app=gnb-ldpc --grace-period=0 --force
+
+# 4. Ver eventos do deployment
+kubectl describe deployment gnb-ldpc
+
+# 5. Comparar hash antes/depois
+kubectl get pod -l app=gnb-ldpc -o jsonpath='{.items[0].status.containerStatuses[0].image}'
+```
+
+## 8. Validação rápida
 ```bash
 # Logs do Kepler (ver RAPL/eBPF habilitados)
 kubectl logs -n kepler -l app.kubernetes.io/name=kepler --tail=100 | grep -Ei "rapl|bpf|pmu"
@@ -322,23 +481,47 @@ kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kep
   curl -s http://localhost:9102/metrics | grep bpf
 ```
 
-## 8. Notas importantes
+## 8. Validação rápida
+```bash
+# Logs do Kepler (ver RAPL/eBPF habilitados)
+kubectl logs -n kepler -l app.kubernetes.io/name=kepler --tail=100 | grep -Ei "rapl|bpf|pmu"
+
+# Métricas RAPL
+kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kepler -o jsonpath='{.items[0].metadata.name}') -- \
+  curl -s http://localhost:9102/metrics | grep rapl
+
+# Métricas eBPF
+kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kepler -o jsonpath='{.items[0].metadata.name}') -- \
+  curl -s http://localhost:9102/metrics | grep bpf
+```
+
+## 9. Notas importantes
 - Bare metal: garante acesso a PMU/Perf e eBPF completos. Kind em Docker geralmente bloqueia PMU; evite para RAPL.
 - Certifique-se de que as sysctls e montagens persistam após reboot (adicione em `/etc/fstab` e `/etc/sysctl.d/*.conf`).
 - Se usar SELinux enforcing, pode ser necessário ajustar contextos ou desabilitar para testes.
 
-## 9. Métricas-chave
+## 9. Notas importantes
+- Bare metal: garante acesso a PMU/Perf e eBPF completos. Kind em Docker geralmente bloqueia PMU; evite para RAPL.
+- Certifique-se de que as sysctls e montagens persistam após reboot (adicione em `/etc/fstab` e `/etc/sysctl.d/*.conf`).
+- Se usar SELinux enforcing, pode ser necessário ajustar contextos ou desabilitar para testes.
+
+## 10. Métricas-chave
 - `kepler_core_rapl_joules_total`, `kepler_dram_rapl_joules_total`, `kepler_uncore_rapl_joules_total`
 - `kepler_container_core_joules_total` (energia por container)
 - `kepler_bpf_*` (coletas via eBPF)
 - `kepler_irq_count`, `kepler_process_*` se habilitado
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 - Se Kepler falhar em iniciar: verifique mounts (`/sys/fs/bpf`, `/sys/kernel/debug`), sysctls (`perf_event_paranoid`, `kptr_restrict`) e permissões do daemonset (privileged/hostPID/hostNetwork).
 - Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
 - Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
 
-## 11. Desativar/limpar o cluster
+## 11. Troubleshooting
+- Se Kepler falhar em iniciar: verifique mounts (`/sys/fs/bpf`, `/sys/kernel/debug`), sysctls (`perf_event_paranoid`, `kptr_restrict`) e permissões do daemonset (privileged/hostPID/hostNetwork).
+- Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
+- Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
+
+## 12. Desativar/limpar o cluster
 
 ### Minikube (driver none)
 ```bash

@@ -236,11 +236,11 @@ void nr_precoding()
 
     /* Precoding parameters: configurable via environment variables */
     const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
-    const int nb_rb       = getenv_int("OAI_RB", 106);          /* e.g., 106 for 20 MHz */
-    const int mod_order   = getenv_int("OAI_MOD_ORDER", 4);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+    const int nb_rb       = getenv_int("OAI_RB", 52);           /* e.g., 52 for 10 MHz */
+    const int mod_order   = getenv_int("OAI_MOD_ORDER", 6);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
     const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000000); /* elevated iterations */
 
     /* Initialize precoding context and allocate buffers */
     precoding_ctx_t *ctx = precoding_init(nb_layers, symbol_sz, nb_rb);
@@ -428,7 +428,7 @@ void nr_crc(){
 	unsigned char data[N / 8];
 	srand(time(NULL));
 	// Loop for 1000000 executions
-	for (long long i = 0; i < 1000000; ++i) {
+	for (long long i = 0; i < 1000000000; ++i) {
 		printf("\rIteration: %lld", i);
 		// Loop for CRC code
 		for (int j = 0; j < N / 8; ++j){
@@ -480,9 +480,9 @@ void nr_ofdm_modulation()
 
     /* Group core parameters together */
     const int fftsize        = 1024;
-    const int nb_symbols     = 1;          // number of OFDM symbols
-    const int num_iterations = 10000000;   // number of iterations
-    const int nb_tx          = 2;          // number of transmit antennas
+    const int nb_symbols     = 14;          // number of OFDM symbols
+    const int num_iterations = 1000000000;   // number of iterations
+    const int nb_tx          = 8;          // number of transmit antennas
 
     /* Automate CP length according to FFT size (1024 or 2048) */
     const int nb_prefix_samples = (fftsize == 2048)
@@ -554,9 +554,9 @@ void nr_modulation_test()
     logInit();
     
     /* Test parameters - configurable modulation and length */
-    const uint32_t modulation_order = 4;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
+    const uint32_t modulation_order = 6;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
     const uint32_t length = 82368;            /* Input bits per iteration */
-    const int num_iterations = 1000000;       /* Number of test runs */
+    const int num_iterations = 1000000000;       /* Number of test runs */
     
     /* Map modulation order to table and name */
     const int16_t *mod_table;
@@ -674,10 +674,10 @@ void nr_layermapping()
     printf("=== Starting NR Layer Mapping tests ===\n");
     
     /* Layer mapping parameters - primary parameter is n_symbs */
-    const uint32_t n_symbs = 82368;         /* Number of symbols (configurable) */
+    const uint32_t n_symbs = 13728;         /* Number of symbols (configurable) */
     const int nbCodes = 1;                  /* 1 codeword */
     const uint8_t n_layers = 2;             /* 2 layers (MIMO) */
-    const int num_iterations = 1000000;     /* Number of test runs */
+    const int num_iterations = 1000000000;     /* Number of test runs */
     
     /* Derived parameters based on n_symbs */
     const int encoded_len = n_symbs;        /* Encoded symbols length = n_symbs */
@@ -766,7 +766,7 @@ void nr_ldpc()
     const int Zc = 384;                     /* Lifting size (must be valid for BG1) */
     const int Kb = 22;                      /* Information bit columns */
     const int K = Kb * Zc;                  /* Total information bits */
-    const int num_runs = 1000000;                /* Number of test runs */
+    const int num_runs = 1000000000;                /* Number of test runs */
     const int n_segments = 1;               /* Single transport block segment */
     
     /* Calculate code rate and output size */
@@ -863,14 +863,14 @@ void nr_ch_estimation()
     
     /* Channel estimation parameters */
     const int nb_antennas_rx = 4;           /* RX antennas */
-    const int nb_antennas_tx = 4;           /* TX antennas */
-    const int nb_rb_pdsch = 106;            /* 106 RBs = 20 MHz */
-    const int ofdm_symbol_size = 2048;      /* FFT size (use 2048 to fit 106 PRBs) */
+    const int nb_antennas_tx = 8;           /* TX antennas */
+    const int nb_rb_pdsch = 52;            /* 106 RBs = 20 MHz */
+    const int ofdm_symbol_size = 1024;      /* FFT size (use 2048 to fit 106 PRBs) */
     const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 10000000000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
-    const int snr_db = getenv_int("OAI_SNR", 20); /* SNR in dB (higher = cleaner signal) */
+    const int snr_db = getenv_int("OAI_SNR", 10); /* SNR in dB (higher = cleaner signal) */
     
     /* Compute noise standard deviation from SNR: SNR_dB = 10*log10(P_signal / P_noise) */
     double snr_linear = pow(10.0, snr_db / 10.0);
@@ -1148,7 +1148,7 @@ void nr_descrambling()
 
         /* Derived buffer sizes: round up to a small SIMD-friendly multiple */
         const int buffer_size = ((int)size + 15) & ~15; /* multiple of 16 LLRs */
-        const int num_iterations = getenv_int("OAI_ITERS", 1000000);
+        const int num_iterations = getenv_int("OAI_ITERS", 1000000000);
         const int verbose = getenv("OAI_VERBOSE") != NULL;
     
         printf("Descrambling parameters: size=%u bits, q=%u, Nid=%u, n_RNTI=0x%X\n",
@@ -1211,11 +1211,11 @@ void nr_layer_demapping_test()
     
     /* Layer demapping parameters */
     const uint8_t Nl = 2;                   /* 2 layers */
-    const uint8_t mod_order = 4;            /* 16-QAM (4 bits per symbol) */
+    const uint8_t mod_order = 6;            /* 64-QAM (6 bits per symbol) */
     const uint32_t length = 13728;           /* Total LLRs to process */
     const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
     const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
-    const int num_iterations = 1000000;
+    const int num_iterations = 1000000000;
     
     /* Calculate layer buffer size */
     const uint32_t layer_sz = length;       /* Each layer holds all LLRs */
@@ -1306,7 +1306,7 @@ void nr_crc_check()
     const uint32_t payload_bits = 40976 ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
-    const int num_iterations = 1000000;        /* 1000 iterations */
+    const int num_iterations = 1000000000;        /* 1e9 iterations */
     
     /* Buffer size in bytes */
     const uint32_t total_bytes = (total_bits + 7) / 8;
@@ -1427,15 +1427,15 @@ void nr_soft_demod()
     printf("=== Starting NR Soft Demodulation (LLR computation) tests ===\n");
     
     /* Soft demodulation parameters */
-    const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
+    const uint32_t rx_size_symbol = 1024;       /* FFT size per symbol */
     const int nbRx = 4;                         /* 2 RX antennas */
     const int Nl = 2;                           /* 2 layers */
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
-    const int snr_db = getenv_int("OAI_SNR", 20);               /* SNR in dB */
-    const int mod_order = getenv_int("OAI_MOD_ORDER", 4);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000000); /* elevated iterations */
+    const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
+    const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
         printf("Soft demod parameters: rx_symbol_size=%u, nbRx=%d, Nl=%d, len=%u\n",
             rx_size_symbol, nbRx, Nl, len);
@@ -1598,14 +1598,14 @@ void nr_mmse_eq()
     printf("=== Starting NR MMSE Equalization tests ===\n");
     
     /* MMSE equalization parameters */
-    const uint32_t rx_size_symbol = 2048;       /* FFT size per symbol */
+    const uint32_t rx_size_symbol = 1024;       /* FFT size per symbol */
     const unsigned char n_rx = 4;               /* 4 RX antennas */
     const unsigned char nl = 4;                 /* 4 layers (MIMO) */
-    const unsigned short nb_rb = 106;           /* 106 RBs (20 MHz) */
-    const unsigned char mod_order = 4;          /* 16-QAM */
+    const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
+    const unsigned char mod_order = 6;          /* 64-QAM */
     const int length = rx_size_symbol;          /* Process full symbol */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
-    const int snr_db = getenv_int("OAI_SNR", 20);               /* SNR in dB */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000000); /* elevated iterations */
+    const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
 
     /* Derive noise variance from SNR (Es/N0) assuming unit symbol energy */
     const double snr_lin = pow(10.0, snr_db / 10.0);
@@ -1759,7 +1759,7 @@ void nr_ldpc_dec()
     /* LDPC decoder parameters */
     const uint8_t BG = 1;                       /* Base Graph 1 */
     const uint16_t Z = 384;                     /* Lifting size */
-    const uint8_t R = 13;                       /* Decoding rate 1/3 */
+    const uint8_t R = 15;                       /* Decoding rate 1/3 */
     const uint8_t numMaxIter = 6;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
     const int num_iterations = getenv_int("OAI_ITERS", 1000000000); /* Allow fast smoke tests */
@@ -1930,7 +1930,7 @@ void nr_ofdm_demo()
     /* OFDM Frame Parameters */
     const int ofdm_symbol_size = 1024;      /* FFT size */
     const int nb_antennas_rx = 4;           /* 4 RX antennas */
-    const int nb_antennas_tx = 4;           /* 4 TX antennas */
+    const int nb_antennas_tx = 8;           /* 8 TX antennas */
     const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
     const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
     /* Automate CP length according to FFT size (1024 or 2048) */
@@ -1938,7 +1938,7 @@ void nr_ofdm_demo()
                                   ? 176
                                   : (ofdm_symbol_size == 1024 ? 88 : (176 * ofdm_symbol_size / 2048));
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;
-    const int num_iterations = 1000000;
+    const int num_iterations = 1000000000;
     
     printf("OFDM parameters: FFT=%d, CP=%d, symbols/slot=%d, antennas=%d\n",
            ofdm_symbol_size, nb_prefix_samples, symbols_per_slot, nb_antennas_rx);

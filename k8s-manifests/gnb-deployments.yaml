@@ -1,0 +1,280 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-crc
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-crc
+  template:
+    metadata:
+      labels:
+        app: gnb-crc
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-crc
+        image: localhost/oai-gnb-crc:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-crc
+  namespace: default
+spec:
+  selector:
+    app: gnb-crc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-layer-map
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-layer-map
+  template:
+    metadata:
+      labels:
+        app: gnb-layer-map
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-layer-map
+        image: localhost/oai-gnb-layer_map:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-layer-map
+  namespace: default
+spec:
+  selector:
+    app: gnb-layer-map
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-ldpc
+  template:
+    metadata:
+      labels:
+        app: gnb-ldpc
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-ldpc
+        image: localhost/oai-gnb-ldpc:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  selector:
+    app: gnb-ldpc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-modulation
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-modulation
+  template:
+    metadata:
+      labels:
+        app: gnb-modulation
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-modulation
+        image: localhost/oai-gnb-modulation:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-modulation
+  namespace: default
+spec:
+  selector:
+    app: gnb-modulation
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-ofdm-mod
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-ofdm-mod
+  template:
+    metadata:
+      labels:
+        app: gnb-ofdm-mod
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-ofdm-mod
+        image: localhost/oai-gnb-ofdm_mod:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-ofdm-mod
+  namespace: default
+spec:
+  selector:
+    app: gnb-ofdm-mod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-precoding
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-precoding
+  template:
+    metadata:
+      labels:
+        app: gnb-precoding
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-precoding
+        image: localhost/oai-gnb-precoding:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-precoding
+  namespace: default
+spec:
+  selector:
+    app: gnb-precoding
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-scramble
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-scramble
+  template:
+    metadata:
+      labels:
+        app: gnb-scramble
+        component: gnb
+    spec:
+      containers:
+      - name: gnb-scramble
+        image: localhost/oai-gnb-scramble:latest
+        imagePullPolicy: Never
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-scramble
+  namespace: default
+spec:
+  selector:
+    app: gnb-scramble
+  ports:
+  - port: 8080
+    targetPort: 8080

@@ -20,7 +20,7 @@ extern void crcTableInit(void);
 
 #define POLY 0x1864CFB
 #define INIT 0xB704CE
-#define N 24072
+#define N 40976
 
 /* Forward declaration of PHY_VARS_NR_UE (avoid including defs_nr_UE.h due to dependencies) */
 typedef struct PHY_VARS_NR_UE_s PHY_VARS_NR_UE;
