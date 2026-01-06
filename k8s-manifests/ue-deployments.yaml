@@ -6,6 +6,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-ch-est
@@ -15,17 +16,18 @@ spec:
         app: ue-ch-est
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ch-est
         image: localhost/oai-ue-ch_est:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-ch-mmse
@@ -55,17 +58,18 @@ spec:
         app: ue-ch-mmse
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ch-mmse
         image: localhost/oai-ue-ch_mmse:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -86,6 +90,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-check-crc
@@ -95,17 +100,18 @@ spec:
         app: ue-check-crc
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-check-crc
         image: localhost/oai-ue-check_crc:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -126,6 +132,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-descrambling
@@ -135,17 +142,18 @@ spec:
         app: ue-descrambling
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-descrambling
         image: localhost/oai-ue-descrambling:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -166,6 +174,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-layer-demap
@@ -175,17 +184,18 @@ spec:
         app: ue-layer-demap
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-layer-demap
         image: localhost/oai-ue-layer_demap:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -206,6 +216,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-ldpc-dec
@@ -215,17 +226,18 @@ spec:
         app: ue-ldpc-dec
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ldpc-dec
         image: localhost/oai-ue-ldpc_dec:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -246,6 +258,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-ofdm-demod
@@ -255,17 +268,18 @@ spec:
         app: ue-ofdm-demod
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ofdm-demod
         image: localhost/oai-ue-ofdm_demod:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -286,6 +300,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: ue-soft-demod
@@ -295,17 +310,18 @@ spec:
         app: ue-soft-demod
         component: ue
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: ue-soft-demod
         image: localhost/oai-ue-soft_demod:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service

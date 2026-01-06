@@ -6,6 +6,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-crc
@@ -15,17 +16,18 @@ spec:
         app: gnb-crc
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-crc
         image: localhost/oai-gnb-crc:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -46,6 +48,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-layer-map
@@ -55,17 +58,18 @@ spec:
         app: gnb-layer-map
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-layer-map
         image: localhost/oai-gnb-layer_map:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -86,6 +90,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-ldpc
@@ -95,17 +100,18 @@ spec:
         app: gnb-ldpc
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ldpc
         image: localhost/oai-gnb-ldpc:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -126,6 +132,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-modulation
@@ -135,17 +142,18 @@ spec:
         app: gnb-modulation
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-modulation
         image: localhost/oai-gnb-modulation:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -166,6 +174,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-ofdm-mod
@@ -175,17 +184,18 @@ spec:
         app: gnb-ofdm-mod
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ofdm-mod
         image: localhost/oai-gnb-ofdm_mod:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -206,6 +216,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-precoding
@@ -215,17 +226,18 @@ spec:
         app: gnb-precoding
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-precoding
         image: localhost/oai-gnb-precoding:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -246,6 +258,7 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  minReadySeconds: 45
   selector:
     matchLabels:
       app: gnb-scramble
@@ -255,17 +268,18 @@ spec:
         app: gnb-scramble
         component: gnb
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-scramble
         image: localhost/oai-gnb-scramble:latest
         imagePullPolicy: Never
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 512Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 1Gi
 ---
 apiVersion: v1
 kind: Service
