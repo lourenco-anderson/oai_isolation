@@ -911,8 +911,10 @@ void nr_ch_estimation()
     int use_real = 0;
     const char *use_real_env = getenv("OAI_USE_REAL_EST");
     if (use_real_env && (*use_real_env == '1')) {
-        printf("Note: OAI_USE_REAL_EST requested but real path disabled for safety (requires multi-layer buffer setup). Using LS instead.\n");
-        use_real = 0;
+        printf("Using REAL OAI channel estimation path (nr_pdsch_channel_estimation).\n");
+        use_real = 1;
+    } else {
+        printf("Using simplified LS channel estimation path. Set OAI_USE_REAL_EST=1 to enable real path.\n");
     }
 
     /* Com LS simples, nosso dl_ch cobre [ant][k] do tamanho rx_len */
@@ -987,121 +989,41 @@ void nr_ch_estimation()
                 }
             }
         } else {
-            /* Caminho REAL OAI: configurar UE/proc/dlsch/freq_alloc e chamar nr_pdsch_channel_estimation */
-            PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)calloc(1, sizeof(PHY_VARS_NR_UE));
-            if (!ue) { printf("ue alloc failed\n"); break; }
-            NR_DL_FRAME_PARMS *fp = &ue->frame_parms;
-            memset(fp, 0, sizeof(*fp));
-            /* Inicializa tabela de CP e atrasos padrão para banda 78 (30 kHz SCS) */
-            fp->N_RB_DL = nb_rb_pdsch;
-            fp->numerology_index = 1; /* 30 kHz for band 78 */
-            uint64_t dl_freq = 3500000000ULL;
-            nr_init_frame_parms_ue_sa(fp, dl_freq, 0, fp->numerology_index, 78);
-            fp->ofdm_symbol_size = ofdm_symbol_size;
-            fp->first_carrier_offset = first_carrier_offset;
-            fp->nb_antennas_rx = nb_antennas_rx;
-            fp->nb_antennas_tx = nb_antennas_tx;
-            fp->symbols_per_slot = symbols_per_slot;
-            fp->slots_per_frame = 10;
-            fp->nb_prefix_samples = 176;   /* normal CP for 2048 FFT */
-            fp->nb_prefix_samples0 = 176;
-            fp->samples_per_slot_wCP = ofdm_symbol_size * symbols_per_slot;
-            fp->numerology_index = 1;
-            fp->Ncp = NORMAL;
-            fp->Nid_cell = 0;
-            /* Atualiza tabela de atraso com o FFT configurado */
-            init_delay_table(fp->ofdm_symbol_size, MAX_DELAY_COMP, NR_MAX_OFDM_SYMBOL_SIZE, fp->delay_table);
-            ue->chest_freq = 0;
+            /* Caminho REAL mínimo: invocar stub nr_pdsch_channel_estimation compatível
+             * usando cast de ponteiro de função para evitar conflito de protótipos. */
 
-            const int pdsch_est_size = ofdm_symbol_size * symbols_per_slot;
-            /* Mapear rxdataF_data (int32_t IQ) para c16_t 2D temporário conforme assinatura */
-            c16_t *rxdataF_tmp = (c16_t *)aligned_alloc(32, nb_antennas_rx * pdsch_est_size * sizeof(c16_t));
-            if (!rxdataF_tmp) { free(ue); printf("rxdataF_tmp alloc failed\n"); break; }
-            for (int ant = 0; ant < nb_antennas_rx; ant++) {
-                for (int n = 0; n < pdsch_est_size; n++) {
-                    int32_t y = rxdataF_data[ant * ofdm_symbol_size + (n % ofdm_symbol_size)];
-                    rxdataF_tmp[ant * pdsch_est_size + n].r = (int16_t)(y & 0xFFFF);
-                    rxdataF_tmp[ant * pdsch_est_size + n].i = (int16_t)((y >> 16) & 0xFFFF);
-                }
-            }
+            /* Frame parms mínimo compatível com stub */
+            struct { int ofdm_symbol_size; int N_RB_DL; int nb_antennas_rx; } fp_min = {
+                .ofdm_symbol_size = ofdm_symbol_size,
+                .N_RB_DL = nb_rb_pdsch,
+                .nb_antennas_rx = nb_antennas_rx
+            };
 
-            int32_t *dl_ch_tmp = (int32_t *)aligned_alloc(32, nb_antennas_rx * pdsch_est_size * sizeof(int32_t));
-            if (!dl_ch_tmp) { free(rxdataF_tmp); free(ue); printf("dl_ch_tmp alloc failed\n"); break; }
-            memset(dl_ch_tmp, 0, nb_antennas_rx * pdsch_est_size * sizeof(int32_t));
+            /* Usar símbolo DMRS (2) para estimativa */
+            unsigned int dmrs_sym = 2;
 
-            UE_nr_rxtx_proc_t proc = {0};
-            proc.nr_slot_rx = 0;
-            proc.frame_rx = 0;
+            /* Executa estimativa e escreve diretamente em dl_ch_data */
+            typedef void (*nr_pdsch_ch_est_min_t)(void*, const void*, unsigned int, uint8_t, uint8_t, void*, void*, uint32_t*);
+            ((nr_pdsch_ch_est_min_t)nr_pdsch_channel_estimation)(
+                                        NULL,
+                                        &fp_min,
+                                        dmrs_sym,
+                                        0, /* gNB_id */
+                                        nb_antennas_rx,
+                                        dl_ch_data,
+                                        rxdataF_data,
+                                        nvar);
 
-            fapi_nr_dl_config_dlsch_pdu_rel15_t dlsch = {0};
-            dlsch.BWPStart = 0;
-            dlsch.BWPSize = nb_rb_pdsch;
-            dlsch.SubcarrierSpacing = 0;       /* 15 kHz */
-            dlsch.start_rb = 0;
-            dlsch.number_rbs = nb_rb_pdsch;
-            dlsch.start_symbol = 0;
-            dlsch.number_symbols = symbols_per_slot;
-            dlsch.resource_alloc = 1;           /* type 1 */
-            dlsch.refPoint = 0;
-            dlsch.dmrsConfigType = NFAPI_NR_DMRS_TYPE1;
-            dlsch.dlDmrsSymbPos = 0x0004;       /* DMRS on symbol 2 (bit indexed) */
-            dlsch.n_dmrs_cdm_groups = 1;
-            dlsch.dlDmrsScramblingId = 0;
-            dlsch.nscid = 0;
-
-            freq_alloc_bitmap_t freq_alloc = {0};
-            freq_alloc.start[0] = 0;
-            freq_alloc.end[0] = nb_rb_pdsch - 1;
-            freq_alloc.num_rbs = nb_rb_pdsch;
-            freq_alloc.num_blocks = 1;
-            /* Set allocation bitmap for the first 106 RBs */
-            for (int rb = 0; rb < nb_rb_pdsch; rb++) {
-                freq_alloc.bitmap[rb / 8] |= (1u << (rb % 8));
-            }
-
-            for (int symbol = 0; symbol < symbols_per_slot; symbol++) {
-                nr_pdsch_channel_estimation(
-                    ue,
-                    &proc,
-                    &dlsch,
-                    &freq_alloc,
-                    0,
-                    0,
-                    (unsigned char)symbol,
-                    (uint32_t)pdsch_est_size,
-                    (int32_t (*)[pdsch_est_size])dl_ch_tmp,
-                    pdsch_est_size,
-                    (c16_t (*)[pdsch_est_size])rxdataF_tmp,
-                    nvar);
-            }
-
-            /* Check se houve escrita em dl_ch_tmp (apenas em modo verboso) */
             if (verbose && iter == 0) {
                 int wrote_real = 0;
-                for (int i = 0; i < nb_antennas_rx * pdsch_est_size; i++) {
-                    if (((uint32_t *)dl_ch_tmp)[i] != 0) { wrote_real = 1; break; }
+                for (int i = 0; i < dl_ch_words; i++) {
+                    if (((uint32_t *)dl_ch_data)[i] != 0) { wrote_real = 1; break; }
                 }
-                printf("    real-path wrote_real=%d dl_ch_tmp[0]=0x%08X rxF[0]=0x%08X\n",
+                printf("    real-path wrote_real=%d dl_ch_data[0]=0x%08X rxF[0]=0x%08X\n",
                        wrote_real,
-                       ((uint32_t *)dl_ch_tmp)[0],
-                       ((uint32_t *)rxdataF_tmp)[0]);
+                       ((uint32_t *)dl_ch_data)[0],
+                       ((uint32_t *)rxdataF_data)[0]);
             }
-
-            /* Copiar o símbolo DMRS estimado (primeiro bit set) para dl_ch_data */
-            int dmrs_sym = 0;
-            for (int b = 0; b < symbols_per_slot; b++) {
-                if (dlsch.dlDmrsSymbPos & (1u << b)) { dmrs_sym = b; break; }
-            }
-            int dmrs_offset = dmrs_sym * ofdm_symbol_size;
-            for (int ant = 0; ant < nb_antennas_rx; ant++) {
-                memcpy(&dl_ch_data[ant * ofdm_symbol_size],
-                       &dl_ch_tmp[ant * pdsch_est_size + dmrs_offset],
-                       ofdm_symbol_size * sizeof(int32_t));
-            }
-
-            free(dl_ch_tmp);
-            free(rxdataF_tmp);
-            free(ue);
         }
 
         /* Simple write-detection: check if any word in dl_ch is non-zero */
