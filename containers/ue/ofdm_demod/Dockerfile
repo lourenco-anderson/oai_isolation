@@ -28,6 +28,7 @@ WORKDIR /app
 # Copy the prebuilt binary and shared libs from the host build tree (context = repo root)
 COPY build/oai_isolation /app/oai_isolation
 COPY ext/openair/cmake_targets/ran_build/build/libnrscope.so /usr/lib/
+COPY ext/openair/cmake_targets/ran_build/build/libdfts.so /usr/lib/
 COPY ext/openair/cmake_targets/ran_build/build/*.so /usr/lib/
 
 # Make sure dynamic linker can find libs

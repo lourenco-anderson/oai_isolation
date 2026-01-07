@@ -19,8 +19,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ch-est
-        image: localhost/oai-ue-ch_est:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-ch_est:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -61,8 +61,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ch-mmse
-        image: localhost/oai-ue-ch_mmse:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-ch_mmse:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -103,8 +103,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-check-crc
-        image: localhost/oai-ue-check_crc:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-check_crc:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -145,8 +145,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-descrambling
-        image: localhost/oai-ue-descrambling:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-descrambling:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -187,8 +187,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-layer-demap
-        image: localhost/oai-ue-layer_demap:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-layer_demap:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -229,8 +229,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ldpc-dec
-        image: localhost/oai-ue-ldpc_dec:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-ldpc_dec:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -271,8 +271,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-ofdm-demod
-        image: localhost/oai-ue-ofdm_demod:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-ofdm_demod:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -313,8 +313,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: ue-soft-demod
-        image: localhost/oai-ue-soft_demod:latest
-        imagePullPolicy: Never
+        image: localhost:5000/ue-soft_demod:latest
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m

@@ -1215,7 +1215,7 @@ void nr_layer_demapping_test()
     const uint32_t length = 13728;           /* Total LLRs to process */
     const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
     const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
-    const int num_iterations = 1000000;
+    const int num_iterations = 10000000;
     
     /* Calculate layer buffer size */
     const uint32_t layer_sz = length;       /* Each layer holds all LLRs */
@@ -1306,7 +1306,7 @@ void nr_crc_check()
     const uint32_t payload_bits = 40976 ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
-    const int num_iterations = 1000000;        /* 1e9 iterations */
+    const int num_iterations = 10000000;        /* 1e9 iterations */
     
     /* Buffer size in bytes */
     const uint32_t total_bytes = (total_bits + 7) / 8;
@@ -1433,7 +1433,7 @@ void nr_soft_demod()
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 10000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
     const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
@@ -1625,7 +1625,20 @@ void nr_mmse_eq()
         printf("nr_mmse_eq: rxdataF_comp allocation failed\n");
         return;
     }
-    memset(rxdataF_comp, 0, sizeof(int32_t) * nl * n_rx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    
+    /* Pre-fill rxdataF_comp with simulated received signal data */
+    for (int layer = 0; layer < nl; layer++) {
+        for (int ant = 0; ant < n_rx; ant++) {
+            for (int k = 0; k < rx_size_symbol; k++) {
+                /* Create complex signal with HIGH AMPLITUDE for MMSE processing visibility
+                 * Real part in lower 16 bits, imaginary in upper 16 bits 
+                 * Use values close to max int16 (±32000) for meaningful MMSE computation */
+                int16_t real_val = (int16_t)(20000 + ((layer * 4000 + ant * 1000 + k) % 10000) - 5000);
+                int16_t imag_val = (int16_t)(18000 + ((layer * 3000 + ant * 750 + k) % 10000) - 5000);
+                rxdataF_comp[layer][ant][k] = ((int32_t)imag_val << 16) | (real_val & 0xFFFF);
+            }
+        }
+    }
     
     /* Allocate channel magnitude buffers for QAM */
     c16_t (*dl_ch_mag)[n_rx][rx_size_symbol] = 
@@ -1679,13 +1692,15 @@ void nr_mmse_eq()
         }
     }
     
-    /* Seed channel estimates with sample values */
+    /* Seed channel estimates with HIGH amplitude values (stable channel) */
     const int32_t sample_ch[] = {
-        0x20002000, 0x1F001F00, 0x21002100, 0x20002000
+        0x30003000, 0x2F002F00, 0x31003100, 0x30003000
     };
     for (int idx = 0; idx < matrixSz; idx++) {
         for (int i = 0; i < length; i++) {
-            dl_ch_estimates_ext[idx][i] = sample_ch[i % 4] + (idx << 12);
+            int16_t ch_r = (int16_t)(12000 + ((idx*1000+i)%4000) - 2000);
+            int16_t ch_i = (int16_t)(11000 + ((idx*1200+i)%3500) - 1750);
+            dl_ch_estimates_ext[idx][i] = ((int32_t)ch_i << 16) | (int32_t)(uint16_t)ch_r;
         }
     }
     
@@ -1706,11 +1721,39 @@ void nr_mmse_eq()
     printf("Starting MMSE equalization loop...\n");
     printf("(Calling nr_dlsch_mmse for MMSE equalization)\n\n");
     
-    /* Main MMSE equalization loop */
+    /* Save original pre-filled data for restoration each iteration */
+    const int total_size = rx_size_symbol * NR_SYMBOLS_PER_SLOT;
+    int32_t (*original_data)[n_rx][total_size] = 
+        aligned_alloc(32, sizeof(int32_t) * nl * n_rx * total_size);
+    if (!original_data) {
+        printf("nr_mmse_eq: original_data allocation failed\n");
+        free(rxdataF_comp);
+        free(dl_ch_mag);
+        free(dl_ch_magb);
+        free(dl_ch_magr);
+        free(dl_ch_estimates_ext);
+        return;
+    }
+    
+    for (int layer = 0; layer < nl; layer++) {
+        for (int ant = 0; ant < n_rx; ant++) {
+            for (int k = 0; k < total_size; k++) {
+                original_data[layer][ant][k] = rxdataF_comp[layer][ant][k];
+            }
+        }
+    }
+    
+    /* Main MMSE equalization loop - restore data each iteration for independent MMSE computations */
+    const int check_idx = symbol * rx_size_symbol;  /* Symbol being processed */
     for (int iter = 0; iter < num_iterations; iter++) {
-        /* Vary first sample so each run differs */
-        rxdataF_comp[0][0][symbol * rx_size_symbol] = 
-            (int32_t)(0x10001000 + (iter << 8));
+        /* Restore original signal data */
+        for (int layer = 0; layer < nl; layer++) {
+            for (int ant = 0; ant < n_rx; ant++) {
+                for (int k = 0; k < total_size; k++) {
+                    rxdataF_comp[layer][ant][k] = original_data[layer][ant][k];
+                }
+            }
+        }
         
         /* Call nr_dlsch_mmse for MMSE equalization */
         nr_dlsch_mmse(rx_size_symbol,
@@ -1728,9 +1771,9 @@ void nr_mmse_eq()
                       length,
                       noise_var);
         
-        if ((iter % 10) == 0) {
-            int32_t *comp_ptr = &rxdataF_comp[0][0][symbol * rx_size_symbol];
-            printf("  iter %3d: rxdataF_comp[0][0] = 0x%08X\n", iter, comp_ptr[0]);
+        if ((iter % 100000) == 0) {
+            printf("  iter %7d: rxdataF_comp[0][0][%d] = 0x%08X\n", 
+                   iter, check_idx, (uint32_t)rxdataF_comp[0][0][check_idx]);
         }
     }
     
@@ -1746,6 +1789,7 @@ void nr_mmse_eq()
     free(dl_ch_magb);
     free(dl_ch_magr);
     free(dl_ch_estimates_ext);
+    free(original_data);
     printf("=== NR MMSE Equalization tests completed ===\n");
 }
 
@@ -1951,29 +1995,34 @@ void nr_ofdm_demo()
     }
     memset(rxdata, 0, samples_per_frame * sizeof(int32_t));
     
-    /* Allocate RX frequency-domain data buffer - single symbol output */
-    int32_t *rxdataF = aligned_alloc(32, ofdm_symbol_size * 2 * sizeof(int32_t));
+    /* Allocate RX frequency-domain buffer for the whole slot (14 symbols) */
+    const int fd_per_slot_words = ofdm_symbol_size * symbols_per_slot; /* int32 per complex RE */
+    int32_t *rxdataF = aligned_alloc(32, fd_per_slot_words * sizeof(int32_t));
     if (!rxdataF) {
         printf("nr_ofdm_demo: rxdataF allocation failed\n");
         free(rxdata);
         return;
     }
-    memset(rxdataF, 0, ofdm_symbol_size * 2 * sizeof(int32_t));
+    memset(rxdataF, 0, fd_per_slot_words * sizeof(int32_t));
     
-    /* Initialize NR DL Frame Parameters structure */
-    NR_DL_FRAME_PARMS frame_parms = {
-        .N_RB_DL = 106,                             /* 106 RBs = 20 MHz */
+    /* Minimal frame parms struct matching nr_slot_fep expected layout */
+    struct fep_frame_parms {
+        int ofdm_symbol_size;
+        int samples_per_slot_wCP;
+        int nb_prefix_samples;
+        int nb_prefix_samples0;
+        int nb_antennas_rx;
+        int symbols_per_slot;
+        int slots_per_frame;
+        int ofdm_offset_divisor;
+    } frame_parms = {
         .ofdm_symbol_size = ofdm_symbol_size,
-        .first_carrier_offset = 0,
-        .nb_antennas_rx = nb_antennas_rx,
-        .nb_antennas_tx = nb_antennas_tx,
-        .symbols_per_slot = symbols_per_slot,
-        .slots_per_frame = slots_per_frame,
+        .samples_per_slot_wCP = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot,
         .nb_prefix_samples = nb_prefix_samples,
         .nb_prefix_samples0 = nb_prefix_samples,
-        .samples_per_slot_wCP = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot,
-        .samples_per_frame = samples_per_frame,
-        .numerology_index = 0,                      /* 15 kHz subcarrier spacing */
+        .nb_antennas_rx = nb_antennas_rx,
+        .symbols_per_slot = symbols_per_slot,
+        .slots_per_frame = slots_per_frame,
         .ofdm_offset_divisor = 8
     };
     
@@ -2012,8 +2061,8 @@ void nr_ofdm_demo()
                int samples_per_symbol = ofdm_symbol_size + nb_prefix_samples;
                int symbol_offset = slot_offset + (symbol * samples_per_symbol);
            
-               /* Clear rxdataF before each symbol processing */
-               memset(rxdataF, 0, ofdm_symbol_size * 2 * sizeof(int32_t));
+               /* Clear only the region for this symbol */
+               memset(&rxdataF[symbol * ofdm_symbol_size], 0, ofdm_symbol_size * sizeof(int32_t));
            
                /* Call nr_slot_fep to perform DFT on time-domain OFDM symbol */
                int result = nr_slot_fep(
@@ -2041,8 +2090,8 @@ void nr_ofdm_demo()
     }
     
     
-    printf("\n=== Final OFDM FEP output (first 8 frequency-domain samples) ===\n");
-    for (int i = 0; i < 8 && i < ofdm_symbol_size * 2; i++) {
+    printf("\n=== Final OFDM FEP output (first 8 samples of symbol 0) ===\n");
+    for (int i = 0; i < 8 && i < ofdm_symbol_size; i++) {
         printf("rxdataF[%02d] = 0x%08X\n", i, ((uint32_t *)rxdataF)[i]);
     }
     
