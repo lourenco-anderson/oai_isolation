@@ -5,7 +5,7 @@ Guia para habilitar métricas completas de energia (RAPL/PMU) e eBPF em bare met
 ## 0. Pré-requisitos no Host (bare metal)
 - Linux com systemd e kernel >= 5.10
 - Acesso root (sudo)
-- pacotes: `curl`, `jq`, `helm`, `kubectl`, `docker` (opcional se usar container runtime), `conntrack`, `socat` (para minikube)
+- pacotes: `curl`, `jq`, `helm`, `kubectl`, `podman` (container runtime recomendado), `conntrack`, `socat` (para minikube), `uidmap`
 - Headers do kernel: `linux-headers-$(uname -r)`
 - Perf/PMU liberado: `sysctl -w kernel.perf_event_paranoid=-1`
 - kptr: `sysctl -w kernel.kptr_restrict=0`
@@ -13,37 +13,147 @@ Guia para habilitar métricas completas de energia (RAPL/PMU) e eBPF em bare met
   - `mount -t bpf bpf /sys/fs/bpf`
   - `mount -t debugfs none /sys/kernel/debug`
 - Certifique-se de que `/lib/modules` e `/usr/src` existem e correspondem ao kernel em uso.
+
+### 0.1 Verificação rápida de pré-requisitos
 ```bash
 echo "[kernel] $(uname -r)"; \
-for bin in curl jq helm kubectl docker conntrack socat; do command -v $bin >/dev/null && echo "[ok] $bin" || echo "[faltando] $bin"; done; \
+for bin in curl jq helm kubectl podman conntrack socat; do command -v $bin >/dev/null && echo "[ok] $bin" || echo "[faltando] $bin"; done; \
 echo "[headers] /lib/modules/$(uname -r):" $(ls /lib/modules/$(uname -r) 2>/dev/null | wc -l) "entradas"; \
 echo "[sysctl] perf_event_paranoid=$(sysctl -n kernel.perf_event_paranoid 2>/dev/null)"; \
 echo "[sysctl] kptr_restrict=$(sysctl -n kernel.kptr_restrict 2>/dev/null)"; \
 mount | grep -E "bpf|debugfs" | sed 's/^/[mount] /'
 ```
 
+### 0.2 Instalação de pacotes (Debian/Ubuntu)
+```bash
+sudo apt update
+sudo apt install -y \
+  curl jq helm kubectl podman conntrack socat uidmap \
+  linux-headers-$(uname -r) \
+  build-essential git
+```
+
+### 0.3 Configuração do Podman como daemon (alternativa a Docker)
+```bash
+# Instalar ou habilitar o serviço podman
+sudo systemctl enable --now podman
+sudo systemctl enable --now podman.socket
+
+# Verificar status
+sudo systemctl status podman
+podman --version
+
+# Configurar permissões para rootless podman (opcional)
+sudo usermod -aG podman $USER
+newgrp podman
+
+# Testar podman
+podman run --rm alpine echo "Podman funcionando!"
+```
+
+### 0.4 Configuração de sysctls e montagens (executar uma vez)
+```bash
+# Liberar acesso ao PMU/Perf
+sudo sysctl -w kernel.perf_event_paranoid=-1
+sudo sysctl -w kernel.kptr_restrict=0
+
+# Montar bpf e debugfs (temporário - persistir em /etc/fstab se necessário)
+sudo mount -t bpf bpf /sys/fs/bpf 2>/dev/null || true
+sudo mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+
+# Persistir sysctls no boot (opcional)
+echo "kernel.perf_event_paranoid = -1" | sudo tee -a /etc/sysctl.d/99-perf.conf
+echo "kernel.kptr_restrict = 0" | sudo tee -a /etc/sysctl.d/99-perf.conf
+sudo sysctl -p /etc/sysctl.d/99-perf.conf
+```
+
 
 ## 1. Ambiente Kubernetes (escolha 1)
-### Opção A: Minikube (driver none, bare metal)
+
+### Opção A: Minikube com Podman (driver podman, recomendado)
 ```bash
-# Instale minikube: https://minikube.sigs.k8s.io/docs/start/
-# Driver none (root)
+# Instalar minikube (se não estiver instalado)
+# https://minikube.sigs.k8s.io/docs/start/
+
+# Versão rápida:
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Criar cluster com podman como driver
+sudo minikube start \
+  --driver=podman \
+  --kubernetes-version=v1.28.0 \
+  --extra-config=kubelet.authentication-anonymous-auth=false \
+  --extra-config=kubelet.cgroup-driver=systemd \
+  --container-runtime=containerd
+
+# OU sem sudo (rootless, se podman rootless configurado)
+minikube start \
+  --driver=podman \
+  --kubernetes-version=v1.28.0 \
+  --extra-config=kubelet.authentication-anonymous-auth=false \
+  --extra-config=kubelet.cgroup-driver=systemd
+
+# Verificar status
+minikube status
+kubectl get nodes
+```
+
+### Opção A-bis: Minikube com driver none (bare metal direto)
+```bash
+# Requer instalar kubeadm, kubelet, kubectl
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+# Após instalar, execute:
 sudo minikube start --driver=none --kubernetes-version=v1.28.0 \
   --extra-config=kubelet.authentication-anonymous-auth=false \
   --extra-config=kubelet.cgroup-driver=systemd
 ```
 
-### Opção B: kubeadm em host único (simplificado)
+### Opção B: kubeadm em host único (simplificado, com containerd)
 ```bash
 # Pré-requisitos kubeadm/kubelet/kubectl
 # https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 
+# Instalar containerd (ou usar podman com CRI)
+sudo apt install -y containerd
+
+# Configurar containerd
+sudo mkdir -p /etc/containerd
+sudo containerd config default | sudo tee /etc/containerd/config.toml
+sudo systemctl restart containerd
+
+# Inicializar cluster
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+# Configurar acesso ao kubectl
 mkdir -p $HOME/.kube
 sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
 # Instale CNI (ex: Calico)
 kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml
+
+# Aguardar nós ficarem ready
+kubectl get nodes -w
+```
+
+### Opção B-bis: kubeadm com Podman CRI (experimental)
+```bash
+# Configurar podman para funcionar como CRI
+sudo mkdir -p /etc/crio
+sudo cat > /etc/crio/crio.conf.d/02-podman-cri << 'EOF'
+[crio.runtime]
+conmon = "/usr/bin/conmon"
+conmon_cgroup = "pod"
+cgroup_manager = "cgroupfs"
+container_exits_dir = "/var/run/crio/exits"
+container_cleanup_exit_code = 0
+default_runtime = "crun"
+enable_metrics = true
+EOF
+
+# Nota: Esta opção é menos comum; recomenda-se usar containerd ou Minikube com driver podman
 ```
 
 ## 2. Ajustes de segurança para Kepler (necessários para RAPL + eBPF)
@@ -236,19 +346,21 @@ kubectl rollout status deployment grafana -n monitoring --timeout=3m
 
 ## 6. Deploy de workloads (Dockerfile ou docker-compose)
 
-### 6.1 Imagem única a partir de Dockerfile
+### 6.1 Imagem única com Podman/Docker
 ```bash
-# Na raiz do seu projeto (com podman ou docker)
+# Na raiz do seu projeto (com podman - RECOMENDADO)
 podman build -t local/app:latest -f Dockerfile .
-# ou
+
+# OU com docker (se preferir)
 docker build -t local/app:latest -f Dockerfile .
 
-# Para kubeadm com containerd, importe diretamente
+# Para kubeadm + containerd: importar diretamente
 podman save local/app:latest | sudo ctr -n k8s.io images import -
-# ou se usar docker
+
+# OU se usar docker:
 docker save local/app:latest | sudo ctr -n k8s.io images import -
 
-# Se estiver em minikube (driver none, bare metal)
+# Se estiver em Minikube com driver podman:
 minikube image load local/app:latest
 
 # Aplicar Deployment/Service
@@ -289,70 +401,105 @@ EOF
 kubectl apply -f /tmp/app.yaml
 ```
 
-### 6.2 Múltiplos contêineres (docker-compose)
-Opções:
-
-**A. Build com podman (recomendado para kubeadm + containerd):**
+### 6.2 Múltiplos contêineres com Podman (recomendado)
 ```bash
 # Build todas as imagens com podman
 for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
   component=$(basename $(dirname $dockerfile))
   side=$(basename $(dirname $(dirname $dockerfile)))
+  echo "[BUILD] oai-${side}-${component}..."
   podman build -t oai-${side}-${component}:latest -f $dockerfile .
 done
 
-# Listar imagens criadas
+# Listar imagens criadas no podman
 podman images | grep oai
 
-# Importar todas para containerd (k8s.io namespace)
+# Para Minikube com driver podman: carregar imagens diretamente
+for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
+  component=$(basename $(dirname $dockerfile))
+  side=$(basename $(dirname $(dirname $dockerfile)))
+  echo "[LOAD] oai-${side}-${component} para Minikube..."
+  minikube image load oai-${side}-${component}:latest
+done
+
+# OU Para kubeadm + containerd: importar todas para k8s.io namespace
 for img in $(podman images --format "{{.Repository}}:{{.Tag}}" | grep oai); do
+  echo "[IMPORT] $img para containerd..."
   podman save $img | sudo ctr -n k8s.io images import -
 done
 
 # Criar manifests Kubernetes manualmente ou usar os gerados em k8s-manifests/
 kubectl apply -f k8s-manifests/
+
+# Verificar pods em execução
+kubectl get pods -o wide
+kubectl logs -l component=gnb --tail=50
 ```
 
-**B. Usar docker-compose (requer Docker daemon):**
+### 6.3 Docker-compose com Podman (alternativa)
 ```bash
-# Iniciar Docker daemon
-sudo systemctl start docker
+# Usar podman-compose (similar ao docker-compose)
+sudo apt install -y podman-compose
 
-# Build com docker-compose
+# Build com podman-compose
+podman-compose build
+
+# OU iniciar com docker-compose tradicional (se preferir Docker daemon)
+sudo systemctl start docker
 docker-compose build
 
-# Importar para containerd
+# Importar para containerd (se necessário)
 for img in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep oai); do
   docker save $img | sudo ctr -n k8s.io images import -
 done
 
 # Aplicar manifests
 kubectl apply -f k8s-manifests/
-```
 
-**C. Conversão com kompose:**
-```bash
+# OU converter para k8s com kompose
 kompose convert -f docker-compose.yml -o k8s-compose/
 kubectl apply -f k8s-compose/
 ```
 
-**Importante:** Use `imagePullPolicy: Never` nos Deployments para forçar uso das imagens locais importadas no containerd.
+### 6.4 Registro de imagens
 
-### 6.3 Registro de imagens
-**Kubeadm + containerd (recomendado):**
-- Build com podman/docker e importe diretamente: `podman save IMAGE | sudo ctr -n k8s.io images import -`
+**Minikube com driver podman (RECOMENDADO):**
+- Build com `podman build -t IMAGE .`
+- Carregar com `minikube image load IMAGE`
+- Use `imagePullPolicy: IfNotPresent` nos manifests
+
+**Kubeadm + containerd:**
+- Build com `podman build -t IMAGE .`
+- Importar com `podman save IMAGE | sudo ctr -n k8s.io images import -`
 - Use `imagePullPolicy: Never` ou `IfNotPresent` nos manifests
-- Verifique imagens no containerd: `sudo ctr -n k8s.io images ls | grep oai`
+- Verifique com `sudo ctr -n k8s.io images ls | grep IMAGE`
 
-**Minikube (driver none):**
-- Use `minikube image load IMAGE` após build
+**Registry local (opcional, para ambos):**
+```bash
+# Suba um registry local
+podman run -d -p 5000:5000 --name registry registry:2
 
-**Registry local (opcional):**
-- Suba um registry: `docker run -d -p 5000:5000 --restart=always --name registry registry:2`
-- Tag e push: `podman tag IMAGE localhost:5000/IMAGE && podman push localhost:5000/IMAGE --tls-verify=false`
-- Configure containerd para registry inseguro se necessário
+# Tag e push com podman
+podman tag IMAGE localhost:5000/IMAGE
+podman push localhost:5000/IMAGE --tls-verify=false
 
-### 6.4 Dicas rápidas
+# OU com docker
+docker tag IMAGE localhost:5000/IMAGE
+docker push localhost:5000/IMAGE
+
+# Configurar containerd para registry inseguro (se necessário)
+sudo mkdir -p /etc/containerd/certs.d/localhost:5000
+sudo cat > /etc/containerd/certs.d/localhost:5000/hosts.toml << 'EOF'
+server = "http://localhost:5000"
+[host."http://localhost:5000"]
+capabilities = ["pull", "resolve"]
+skip_verify = true
+EOF
+
+sudo systemctl restart containerd
+```
+
+### 6.5 Dicas rápidas
 - Sempre ajustar `resources.requests/limits` para aparecer em métricas de scheduling e consumo.
 - Para pods que rodam testes e encerram: use `restartPolicy: Never` ou `OnFailure` se não quiser loops.
 - Para expor externamente: troque o Service para `type: NodePort` ou use Ingress/LoadBalancer conforme o ambiente.
@@ -521,9 +668,100 @@ kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kep
 - Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
 - Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
 
-## 12. Desativar/limpar o cluster
+## 12. Troubleshooting com Podman
 
-### Minikube (driver none)
+### Podman socket não encontrado
+```bash
+# Se receber erro sobre /var/run/podman/podman.sock:
+sudo systemctl enable --now podman.socket
+
+# Verificar status
+sudo systemctl status podman.socket
+ls -la /var/run/podman/podman.sock
+```
+
+### Permissões com Podman rootless
+```bash
+# Se usar podman sem sudo:
+sudo usermod -aG podman $USER
+newgrp podman
+
+# Verificar se funciona sem sudo
+podman run --rm alpine echo "OK"
+```
+
+### Minikube com Podman não inicia
+```bash
+# Limpar Minikube anterior
+minikube delete
+
+# Restart do podman
+sudo systemctl restart podman
+
+# Tentar novamente
+minikube start --driver=podman --kubernetes-version=v1.28.0
+
+# Ver logs detalhados
+minikube logs --follow
+```
+
+### Imagens não aparecem no Kubernetes
+```bash
+# Verificar imagens no podman
+podman images | grep oai
+
+# Se usar Minikube com driver podman:
+minikube image ls | grep oai
+
+# Se usar kubeadm + containerd:
+sudo ctr -n k8s.io images ls | grep oai
+
+# Se faltarem imagens, recarregar:
+minikube image load oai-gnb-ldpc:latest
+# OU
+podman save oai-gnb-ldpc:latest | sudo ctr -n k8s.io images import -
+```
+
+### Erro: "rpc error: code = Unavailable"
+```bash
+# Containerd não está rodando (se usar kubeadm)
+sudo systemctl status containerd
+
+# Se não estiver rodando:
+sudo systemctl start containerd
+sudo systemctl enable containerd
+
+# Verificar configuração:
+sudo cat /etc/containerd/config.toml | grep -A 5 "\[plugins"
+```
+
+### Build lento ou falha ao importar imagens grandes
+```bash
+# Aumentar recursos disponíveis para Minikube
+minikube delete
+minikube start --driver=podman \
+  --memory=8192 \
+  --cpus=4 \
+  --disk-size=50gb
+
+# OU para podman diretamente, ajustar storage:
+sudo podman system prune -a  # Limpar cache
+sudo podman image prune -a   # Remover imagens não usadas
+```
+
+## 13. Desativar/limpar o cluster
+
+### Minikube com Podman
+```bash
+minikube stop
+minikube delete --all --purge
+
+# Limpar containers e imagens orphãs do podman
+podman container rm -a -f
+podman image prune -a
+```
+
+### Minikube driver none
 ```bash
 sudo minikube stop
 sudo minikube delete --all --purge
@@ -538,6 +776,9 @@ sudo rm -rf /etc/cni/net.d /var/lib/cni /var/lib/kubelet /var/lib/etcd /var/lib/
 sudo ip link delete cni0     2>/dev/null || true
 sudo ip link delete flannel.1 2>/dev/null || true
 sudo ip link delete kube-ipvs0 2>/dev/null || true
+
+# Limpar imagens do containerd
+sudo ctr -n k8s.io images rm $(sudo ctr -n k8s.io images ls -q) 2>/dev/null || true
 ```
 
 ### Namespaces/Helm releases (se quiser apenas remover workloads)
@@ -545,4 +786,77 @@ sudo ip link delete kube-ipvs0 2>/dev/null || true
 helm uninstall kepler prometheus grafana -n monitoring || true
 helm uninstall kepler -n kepler || true
 kubectl delete namespace kepler monitoring || true
+```
+
+## 14. Quick Start (Resumo do fluxo completo com Podman)
+
+### Passo 1: Preparar ambiente
+```bash
+# Instalar dependências
+sudo apt update && sudo apt install -y curl jq helm kubectl podman conntrack socat uidmap linux-headers-$(uname -r)
+
+# Configurar sysctls e montagens
+sudo sysctl -w kernel.perf_event_paranoid=-1
+sudo sysctl -w kernel.kptr_restrict=0
+sudo mount -t bpf bpf /sys/fs/bpf 2>/dev/null || true
+sudo mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+
+# Iniciar podman
+sudo systemctl enable --now podman
+```
+
+### Passo 2: Criar cluster Kubernetes
+```bash
+# Instalar Minikube
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Iniciar com Podman
+minikube start --driver=podman --kubernetes-version=v1.28.0 \
+  --extra-config=kubelet.cgroup-driver=systemd \
+  --memory=8192 --cpus=4
+```
+
+### Passo 3: Build e deploy de workloads
+```bash
+# Build das imagens
+cd /home/anderson/dev/oai_isolation
+for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
+  component=$(basename $(dirname $dockerfile))
+  side=$(basename $(dirname $(dirname $dockerfile)))
+  podman build -t oai-${side}-${component}:latest -f $dockerfile .
+done
+
+# Carregar no Minikube
+for dockerfile in containers/gnb/*/Dockerfile containers/ue/*/Dockerfile; do
+  component=$(basename $(dirname $dockerfile))
+  side=$(basename $(dirname $(dirname $dockerfile)))
+  minikube image load oai-${side}-${component}:latest
+done
+
+# Deploy
+kubectl apply -f k8s-manifests/
+```
+
+### Passo 4: Instalar Kepler + Prometheus + Grafana
+```bash
+# Executar as seções 3, 4, 5 do guia acima com helm
+kubectl create namespace kepler monitoring
+helm repo add kepler https://sustainable-computing-io.github.io/kepler-helm-chart
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+# Aplicar values (ver seções 3, 4, 5)
+# ... (copiar comandos das seções 3, 4, 5)
+```
+
+### Passo 5: Acessar dashboards
+```bash
+kubectl port-forward -n monitoring svc/grafana 3000:80
+kubectl port-forward -n monitoring svc/prometheus-server 9091:80
+
+# Abrir no navegador:
+# - Grafana: http://localhost:3000 (admin/admin123)
+# - Prometheus: http://localhost:9091
 ```
