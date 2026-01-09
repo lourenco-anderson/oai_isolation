@@ -156,7 +156,24 @@ EOF
 # Nota: Esta opção é menos comum; recomenda-se usar containerd ou Minikube com driver podman
 ```
 
-## 2. Ajustes de segurança para Kepler (necessários para RAPL + eBPF)
+## 2. Instalar Prometheus Operator CRDs (necessário antes do Kepler)
+
+O Kepler usa `ServiceMonitor`, que é um CRD fornecido pelo Prometheus Operator. Instale-o primeiro:
+
+```bash
+# Criar namespace monitoring
+kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+# Instalar Prometheus Operator CRDs
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
+
+# Verificar que os CRDs foram instalados
+kubectl get crd | grep monitoring.coreos.com
+# Esperado: servicemonitors.monitoring.coreos.com e prometheusrules.monitoring.coreos.com
+```
+
+## 3. Ajustes de segurança para Kepler (necessários para RAPL + eBPF)
 - Kepler precisa rodar com:
   - `privileged: true`
   - `hostNetwork: true`
@@ -169,7 +186,7 @@ EOF
   - `/sys/fs/bpf`
   - `/sys/kernel/debug`
 
-## 3. Instalar Kepler com RAPL + eBPF
+## 4. Instalar Kepler com RAPL + eBPF
 Crie o values para o Helm:
 ```bash
 cat > /tmp/kepler-values.yaml << 'EOF'
@@ -190,8 +207,8 @@ extraEnvVars:
 serviceMonitor:
   enabled: true
   namespace: monitoring
-  interval: 30s
-  scrapeTimeout: 10s
+  interval: 5s
+  scrapeTimeout: 2s
 
 startupProbe:
   enabled: true
@@ -262,14 +279,24 @@ EOF
 
 Instale Kepler (namespace `kepler`):
 ```bash
+# Criar namespace kepler
 kubectl create namespace kepler --dry-run=client -o yaml | kubectl apply -f -
+
+# Adicionar repo Helm do Kepler
 helm repo add kepler https://sustainable-computing-io.github.io/kepler-helm-chart
 helm repo update
+
+# Instalar Kepler com os values customizados
 helm upgrade --install kepler kepler/kepler -n kepler -f /tmp/kepler-values.yaml
+
+# Aguardar o daemonset estar pronto
 kubectl rollout status daemonset kepler -n kepler --timeout=3m
+
+# Verificar pods rodando
+kubectl get pods -n kepler -o wide
 ```
 
-## 4. Prometheus (scrape Kepler)
+## 5. Prometheus (scrape Kepler)
 ```bash
 cat > /tmp/prom-values.yaml << 'EOF'
 server:
@@ -278,8 +305,8 @@ server:
 
 extraScrapeConfigs: |-
   - job_name: 'kepler'
-    scrape_interval: 30s
-    scrape_timeout: 10s
+    scrape_interval: 5s
+    scrape_timeout: 2s
     static_configs:
       - targets: ['kepler.kepler:9102']
 
@@ -293,14 +320,19 @@ kubeStateMetrics:
   enabled: false
 EOF
 
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+# Instalar Prometheus
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 helm upgrade --install prometheus prometheus-community/prometheus -n monitoring -f /tmp/prom-values.yaml
+
+# Aguardar Prometheus estar pronto
 kubectl rollout status deployment prometheus-server -n monitoring --timeout=3m
+
+# Verificar pods
+kubectl get pods -n monitoring -o wide
 ```
 
-## 5. Grafana (dashboards Kepler)
+## 6. Grafana (dashboards Kepler)
 ```bash
 cat > /tmp/grafana-values.yaml << 'EOF'
 adminPassword: admin123
@@ -334,17 +366,39 @@ dashboardsConfigMaps:
   kepler: kepler-dashboard
 EOF
 
-# Suponha que você já tenha o JSON do dashboard em /tmp/Kepler-Exporter.json
-kubectl create configmap kepler-dashboard -n monitoring \
-  --from-file=/tmp/Kepler-Exporter.json --dry-run=client -o yaml | kubectl apply -f -
+# Criar ConfigMap com o dashboard (se o arquivo existir)
+# Se não tiver o arquivo, pule esta etapa (Grafana vai funcionar sem dashboard pré-importado)
+if [ -f /tmp/Kepler-Exporter.json ]; then
+  kubectl create configmap kepler-dashboard -n monitoring \
+    --from-file=/tmp/Kepler-Exporter.json --dry-run=client -o yaml | kubectl apply -f -
+else
+  echo "Aviso: /tmp/Kepler-Exporter.json não encontrado. Prosseguindo sem dashboard pré-importado."
+  # Criar um ConfigMap vazio se não existir
+  kubectl create configmap kepler-dashboard -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+fi
 
+# Instalar Grafana
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 helm upgrade --install grafana grafana/grafana -n monitoring -f /tmp/grafana-values.yaml
+
+# Aguardar Grafana estar pronto
 kubectl rollout status deployment grafana -n monitoring --timeout=3m
+
+# Verificar todos os pods
+kubectl get pods -n monitoring -o wide
 ```
 
-## 6. Deploy de workloads (Dockerfile ou docker-compose)
+### Acesso ao Grafana
+```bash
+# Port-forward para acessar Grafana localmente
+kubectl port-forward -n monitoring svc/grafana 3000:80
+
+# Abrir no navegador: http://localhost:3000
+# Credenciais: admin / admin123
+```
+
+## 7. Deploy de workloads (Dockerfile ou docker-compose)
 
 ### 6.1 Imagem única com Podman/Docker
 ```bash
@@ -511,7 +565,7 @@ kubectl port-forward -n monitoring svc/prometheus-server 9091:80
 ```
 Credenciais Grafana: `admin / admin123`.
 
-## 7. Atualizar imagens após mudanças no código-fonte
+## 8. Atualizar imagens após mudanças no código-fonte
 
 Quando modificar arquivos em `src/`, siga este fluxo para reconstruir e atualizar os containers no cluster:
 
@@ -647,28 +701,23 @@ kubectl exec -n kepler $(kubectl get pod -n kepler -l app.kubernetes.io/name=kep
 - Certifique-se de que as sysctls e montagens persistam após reboot (adicione em `/etc/fstab` e `/etc/sysctl.d/*.conf`).
 - Se usar SELinux enforcing, pode ser necessário ajustar contextos ou desabilitar para testes.
 
-## 9. Notas importantes
-- Bare metal: garante acesso a PMU/Perf e eBPF completos. Kind em Docker geralmente bloqueia PMU; evite para RAPL.
-- Certifique-se de que as sysctls e montagens persistam após reboot (adicione em `/etc/fstab` e `/etc/sysctl.d/*.conf`).
-- Se usar SELinux enforcing, pode ser necessário ajustar contextos ou desabilitar para testes.
-
-## 10. Métricas-chave
+## 11. Métricas-chave
 - `kepler_core_rapl_joules_total`, `kepler_dram_rapl_joules_total`, `kepler_uncore_rapl_joules_total`
 - `kepler_container_core_joules_total` (energia por container)
 - `kepler_bpf_*` (coletas via eBPF)
 - `kepler_irq_count`, `kepler_process_*` se habilitado
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 - Se Kepler falhar em iniciar: verifique mounts (`/sys/fs/bpf`, `/sys/kernel/debug`), sysctls (`perf_event_paranoid`, `kptr_restrict`) e permissões do daemonset (privileged/hostPID/hostNetwork).
 - Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
 - Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
 
-## 11. Troubleshooting
+## 13. Troubleshooting
 - Se Kepler falhar em iniciar: verifique mounts (`/sys/fs/bpf`, `/sys/kernel/debug`), sysctls (`perf_event_paranoid`, `kptr_restrict`) e permissões do daemonset (privileged/hostPID/hostNetwork).
 - Se RAPL não aparecer: valide suporte em `/sys/class/powercap/intel-rapl` e se o driver está carregado.
 - Se eBPF falhar: confira `dmesg | grep -i bpf` e se o kernel suporta CO-RE e cgroup-bpf.
 
-## 12. Troubleshooting com Podman
+## 14. Troubleshooting com Podman
 
 ### Podman socket não encontrado
 ```bash
@@ -749,7 +798,7 @@ sudo podman system prune -a  # Limpar cache
 sudo podman image prune -a   # Remover imagens não usadas
 ```
 
-## 13. Desativar/limpar o cluster
+## 15. Desativar/limpar o cluster
 
 ### Minikube com Podman
 ```bash
@@ -788,7 +837,7 @@ helm uninstall kepler -n kepler || true
 kubectl delete namespace kepler monitoring || true
 ```
 
-## 14. Quick Start (Resumo do fluxo completo com Podman)
+## 16. Quick Start (Resumo do fluxo completo com Podman)
 
 ### Passo 1: Preparar ambiente
 ```bash
@@ -840,15 +889,13 @@ kubectl apply -f k8s-manifests/
 
 ### Passo 4: Instalar Kepler + Prometheus + Grafana
 ```bash
-# Executar as seções 3, 4, 5 do guia acima com helm
-kubectl create namespace kepler monitoring
-helm repo add kepler https://sustainable-computing-io.github.io/kepler-helm-chart
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
+# Opção A: Executar script automatizado (RECOMENDADO)
+cd /home/anderson/dev/oai_isolation/containers
+chmod +x install-kepler-stack.sh
+./install-kepler-stack.sh
 
-# Aplicar values (ver seções 3, 4, 5)
-# ... (copiar comandos das seções 3, 4, 5)
+# Opção B: Executar manualmente (seguir seções 2-6 acima)
+# ...
 ```
 
 ### Passo 5: Acessar dashboards

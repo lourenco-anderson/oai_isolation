@@ -1228,7 +1228,7 @@ void nr_crc_check()
     const uint32_t payload_bits = 40976 ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
-    const int num_iterations = 10000000;        /* 1e9 iterations */
+    const int num_iterations = 100000000;        /* 1e9 iterations */
     
     /* Buffer size in bytes */
     const uint32_t total_bytes = (total_bits + 7) / 8;
@@ -1355,7 +1355,7 @@ void nr_soft_demod()
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = getenv_int("OAI_ITERS", 10000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 100000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
     const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
@@ -1904,7 +1904,7 @@ void nr_ofdm_demo()
                                   ? 176
                                   : (ofdm_symbol_size == 1024 ? 88 : (176 * ofdm_symbol_size / 2048));
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;
-    const int num_iterations = 1000000;
+    const int num_iterations = 10000000;
     
     printf("OFDM parameters: FFT=%d, CP=%d, symbols/slot=%d, antennas=%d\n",
            ofdm_symbol_size, nb_prefix_samples, symbols_per_slot, nb_antennas_rx);
