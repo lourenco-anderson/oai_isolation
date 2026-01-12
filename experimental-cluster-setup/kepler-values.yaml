@@ -1,0 +1,89 @@
+image:
+  repository: quay.io/sustainable_computing_io/kepler
+  tag: "v0.11.3"
+  pullPolicy: IfNotPresent
+
+extraEnvVars:
+  KEPLER_LOG_LEVEL: "5"
+  ENABLE_GPU: "false"
+  ENABLE_QAT: "false"
+  ENABLE_EBPF_CGROUPID: "true"
+  EXPOSE_HW_COUNTER_METRICS: "true"
+  EXPOSE_IRQ_COUNTER_METRICS: "true"
+  EXPOSE_CGROUP_METRICS: "true"
+  ENABLE_PROCESS_METRICS: "true"
+  EXPOSE_BPF_METRICS: "true"
+  EXPOSE_COMPONENT_POWER: "true"
+  RAPL_ENABLED: "true"
+  EXPOSE_RAPL_METRICS: "true"
+
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  interval: 2s
+  scrapeTimeout: 2s
+
+startupProbe:
+  enabled: true
+  failureThreshold: 15
+  periodSeconds: 10
+
+livenessProbe:
+  enabled: true
+  periodSeconds: 60
+
+readinessProbe:
+  enabled: true
+  periodSeconds: 10
+
+resources:
+  limits:
+    memory: 1Gi
+    cpu: 2000m
+  requests:
+    memory: 512Mi
+    cpu: 500m
+
+hostNetwork: true
+hostPID: true
+securityContext:
+  privileged: true
+  capabilities:
+    add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_RESOURCE
+      - NET_ADMIN
+      - PERFMON
+
+volumes:
+  - name: lib-modules
+    hostPath:
+      path: /lib/modules
+  - name: usr-src
+    hostPath:
+      path: /usr/src
+  - name: sys
+    hostPath:
+      path: /sys
+  - name: bpf
+    hostPath:
+      path: /sys/fs/bpf
+  - name: debugfs
+    hostPath:
+      path: /sys/kernel/debug
+
+volumeMounts:
+  - name: lib-modules
+    mountPath: /lib/modules
+    readOnly: true
+  - name: usr-src
+    mountPath: /usr/src
+    readOnly: true
+  - name: sys
+    mountPath: /host/sys
+    readOnly: true
+  - name: bpf
+    mountPath: /sys/fs/bpf
+  - name: debugfs
+    mountPath: /sys/kernel/debug

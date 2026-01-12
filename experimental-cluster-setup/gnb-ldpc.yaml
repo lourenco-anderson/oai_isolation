@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gnb-ldpc
+  template:
+    metadata:
+      labels:
+        app: gnb-ldpc
+    spec:
+      containers:
+        - name: gnb-ldpc
+          image: gnb-ldpc:latest
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: gnb-ldpc
+  ports:
+    - port: 80
+      targetPort: 80

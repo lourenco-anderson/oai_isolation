@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-lpdc-dec
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ue-lpdc-dec
+  template:
+    metadata:
+      labels:
+        app: ue-lpdc-dec
+    spec:
+      containers:
+        - name: ue-lpdc-dec
+          image: ue-lpdc-dec:latest
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-lpdc-dec
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: ue-lpdc-dec
+  ports:
+    - port: 80
+      targetPort: 80
