@@ -189,6 +189,9 @@ spec:
       - name: gnb-ofdm-mod
         image: localhost/oai-gnb-ofdm_mod:latest
         imagePullPolicy: Never
+        env:
+        - name: OAI_DFTS_LIB
+          value: /usr/lib/libdfts.so
         resources:
           requests:
             cpu: 1000m

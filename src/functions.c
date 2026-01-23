@@ -1070,7 +1070,7 @@ void nr_descrambling()
 
         /* Derived buffer sizes: round up to a small SIMD-friendly multiple */
         const int buffer_size = ((int)size + 15) & ~15; /* multiple of 16 LLRs */
-        const int num_iterations = getenv_int("OAI_ITERS", 100000000);
+        const int num_iterations = getenv_int("OAI_ITERS", 1000);
         const int verbose = getenv("OAI_VERBOSE") != NULL;
     
         printf("Descrambling parameters: size=%u bits, q=%u, Nid=%u, n_RNTI=0x%X\n",
@@ -1355,7 +1355,7 @@ void nr_soft_demod()
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = getenv_int("OAI_ITERS", 100000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
     const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
@@ -1728,7 +1728,7 @@ void nr_ldpc_dec()
     const uint8_t R = 15;                       /* Decoding rate 1/3 */
     const uint8_t numMaxIter = 6;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* Allow fast smoke tests */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000); /* Allow fast smoke tests */
     const int snr_db = getenv_int("OAI_SNR", 10);             /* BPSK Eb/N0 in dB (high by default) */
     
         printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
