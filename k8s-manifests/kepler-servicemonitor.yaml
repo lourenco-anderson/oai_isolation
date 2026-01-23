@@ -1,0 +1,34 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kepler
+  namespace: kepler
+  labels:
+    app: kepler
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: kepler
+  endpoints:
+  - port: metrics
+    interval: 1s
+    scrapeTimeout: 10s
+    path: /metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kepler
+  namespace: kepler
+  labels:
+    app: kepler
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 8888
+    targetPort: 8888
+    protocol: TCP
+  selector:
+    app: kepler

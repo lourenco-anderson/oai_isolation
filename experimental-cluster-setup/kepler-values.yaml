@@ -3,6 +3,9 @@ image:
   tag: "v0.11.3"
   pullPolicy: IfNotPresent
 
+# Remove any command-line args that might conflict
+command: []
+
 extraEnvVars:
   KEPLER_LOG_LEVEL: "5"
   ENABLE_GPU: "false"

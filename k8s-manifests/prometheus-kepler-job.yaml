@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-kepler-config
+  namespace: monitoring
+data:
+  kepler.yml: |
+    - job_name: 'kepler'
+      scrape_interval: 1s
+      scrape_timeout: 1s
+      static_configs:
+        - targets: ['kepler.kepler.svc.cluster.local:8888']
+          labels:
+            app: 'kepler'
+            namespace: 'kepler'

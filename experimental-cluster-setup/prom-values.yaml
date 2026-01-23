@@ -7,7 +7,8 @@ extraScrapeConfigs: |-
     scrape_interval: 5s
     scrape_timeout: 2s
     static_configs:
-      - targets: ['kepler.kepler:9102']
+      # Kepler v0.11.3 default listen address is :28282 (from ConfigMap web.listenAddresses)
+      - targets: ['kepler.kepler:28282']
 
 alertmanager:
   enabled: false
