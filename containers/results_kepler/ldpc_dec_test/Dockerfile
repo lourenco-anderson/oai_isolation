@@ -33,5 +33,5 @@ COPY ext/openair/cmake_targets/ran_build/build/*.so /usr/lib/
 # Make sure dynamic linker can find libs
 ENV LD_LIBRARY_PATH=/usr/lib:/app:$LD_LIBRARY_PATH
 
-# Run selected function
-CMD ["sh", "-c", "/app/oai_isolation nr_layer_demapping && sleep 90"]
+# Run selected function and sleep for 90 seconds
+CMD ["sh", "-c", "/app/oai_isolation nr_ldpc_dec && sleep 90"]

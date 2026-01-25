@@ -34,4 +34,4 @@ COPY ext/openair/cmake_targets/ran_build/build/*.so /usr/lib/
 ENV LD_LIBRARY_PATH=/usr/lib:/app:$LD_LIBRARY_PATH
 
 # Run selected function
-CMD ["/app/oai_isolation", "nr_crc"]
+CMD ["sh", "-c", "/app/oai_isolation nr_crc && sleep 90"]

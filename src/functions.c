@@ -1355,7 +1355,7 @@ void nr_soft_demod()
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
-    const int num_iterations = getenv_int("OAI_ITERS", 100000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
     const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     

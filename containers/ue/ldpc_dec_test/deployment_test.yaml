@@ -1,0 +1,43 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ldpc-dec-test
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ldpc-dec-test
+  template:
+    metadata:
+      labels:
+        app: ldpc-dec-test
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ldpc-dec-test
+        image: ldpc_dec_test:latest
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ldpc-dec-test
+  namespace: default
+spec:
+  selector:
+    app: ldpc-dec-test
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
