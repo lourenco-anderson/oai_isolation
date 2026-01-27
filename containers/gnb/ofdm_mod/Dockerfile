@@ -30,6 +30,10 @@ COPY build/oai_isolation /app/oai_isolation
 COPY ext/openair/cmake_targets/ran_build/build/libnrscope.so /usr/lib/
 COPY ext/openair/cmake_targets/ran_build/build/*.so /usr/lib/
 
+# Create the expected directory structure for dlopen paths
+RUN mkdir -p /home/anderson/dev/oai_isolation/ext/openair/cmake_targets/ran_build/build && \
+    ln -s /usr/lib/*.so /home/anderson/dev/oai_isolation/ext/openair/cmake_targets/ran_build/build/ || true
+
 # Make sure dynamic linker can find libs
 ENV LD_LIBRARY_PATH=/usr/lib:/app:$LD_LIBRARY_PATH
 

@@ -19,8 +19,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-crc
-        image: localhost/gnb-crc:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-crc:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -61,8 +61,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-layer-map
-        image: localhost/gnb-layer_map:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-layer_map:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -103,8 +103,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ldpc
-        image: localhost/gnb-ldpc:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-ldpc:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -145,8 +145,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-modulation
-        image: localhost/gnb-modulation:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-modulation:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -187,8 +187,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ofdm-mod
-        image: localhost/gnb-ofdm_mod:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-ofdm_mod:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -229,8 +229,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-precoding
-        image: localhost/gnb-precoding:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-precoding:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
@@ -271,8 +271,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-scramble
-        image: localhost/gnb-scramble:30e-9-15khz-snr10
-        imagePullPolicy: Never
+        image: gnb-scramble:30e-9-15khz-snr10
+        imagePullPolicy: IfNotPresent
         resources:
           requests:
             cpu: 1000m
