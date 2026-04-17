@@ -700,40 +700,103 @@ void nr_pdsch_channel_estimation(void *ue_ptr,
     
     int32_t *rxdataF = (int32_t *)rxdataF_ptr;
     int fft_size = fp->ofdm_symbol_size;
-    
-    uint32_t ch_seed = (gNB_id * 256 + symbol) * 0x87654321;
-    uint32_t pilot_error_sum = 0;
-    
-    for (int ant = 0; ant < nb_antennas_rx; ant++) {
-        for (int k = 0; k < fft_size; k++) {
-            int32_t rxF_sample = 0;
-            if (rxdataF) {
-                int idx = ant * fft_size + k;
-                rxF_sample = rxdataF[idx];
-            }
-            
-            ch_seed = ch_seed * 1103515245 + 12345;
-            int16_t ch_factor = (int16_t)((ch_seed >> 16) & 0xFFFF);
-            
-            ch_seed = ch_seed * 1103515245 + 12345;
-            int16_t weight = (int16_t)((ch_seed >> 16) & 0x7FFF) >> 8;
-            
-            int32_t ch_est = (rxF_sample * weight) >> 7;
-            ch_est ^= (ch_factor << 8);
-            
-            int32_t *dl_ch_ptr = (int32_t *)dl_ch;
-            int ch_idx = ant * fft_size + k;
-            dl_ch_ptr[ch_idx] = ch_est;
-            
-            pilot_error_sum += (ch_est ^ rxF_sample) & 0xFFFF;
-        }
-        
-        if (nvar) {
-            ch_seed = ch_seed * 1103515245 + 12345;
-            uint32_t noise_est = (pilot_error_sum >> 8) + (ch_seed & 0xFF);
-            nvar[ant] = (noise_est < 1000) ? noise_est : 255;
-        }
+    int channel_taps = 48;
+    const char *taps_env = getenv("OAI_CHANNEL_TAPS");
+    if (taps_env && *taps_env) {
+      int parsed = atoi(taps_env);
+      if (parsed > 0) channel_taps = parsed;
     }
+    if (channel_taps > 100) channel_taps = 100;
+    if (channel_taps > fft_size) channel_taps = fft_size;
+    
+    if (channel_taps < 1) channel_taps = 1;
+
+    /* Physical LS estimator with delay-domain truncation:
+     * 1) H_ls[k] from pilots (P=1+0j in this isolation harness)
+     * 2) h[l] = IDFT(H_ls)[0..L-1]
+     * 3) H_hat[k] = DFT(h[0..L-1])
+     */
+    double *Hls_re = calloc((size_t)fft_size, sizeof(double));
+    double *Hls_im = calloc((size_t)fft_size, sizeof(double));
+    double *h_re = calloc((size_t)channel_taps, sizeof(double));
+    double *h_im = calloc((size_t)channel_taps, sizeof(double));
+
+    if (!Hls_re || !Hls_im || !h_re || !h_im) {
+      free(Hls_re);
+      free(Hls_im);
+      free(h_re);
+      free(h_im);
+      return;
+    }
+
+    const double two_pi = 6.28318530717958647692;
+    int32_t *dl_ch_ptr = (int32_t *)dl_ch;
+
+    for (int ant = 0; ant < nb_antennas_rx; ant++) {
+      uint64_t err_acc = 0;
+
+      for (int k = 0; k < fft_size; k++) {
+        int idx = ant * fft_size + k;
+        int32_t y = rxdataF[idx];
+        int16_t yr = (int16_t)(y & 0xFFFF);
+        int16_t yi = (int16_t)((y >> 16) & 0xFFFF);
+        Hls_re[k] = (double)yr;
+        Hls_im[k] = (double)yi;
+      }
+
+      for (int l = 0; l < channel_taps; l++) {
+        double acc_re = 0.0;
+        double acc_im = 0.0;
+        for (int k = 0; k < fft_size; k++) {
+          double a = two_pi * (double)k * (double)l / (double)fft_size;
+          double c = cos(a);
+          double s = sin(a);
+          acc_re += Hls_re[k] * c - Hls_im[k] * s;
+          acc_im += Hls_re[k] * s + Hls_im[k] * c;
+        }
+        h_re[l] = acc_re / (double)fft_size;
+        h_im[l] = acc_im / (double)fft_size;
+      }
+
+      for (int k = 0; k < fft_size; k++) {
+        double Hhat_re = 0.0;
+        double Hhat_im = 0.0;
+        for (int l = 0; l < channel_taps; l++) {
+          double a = two_pi * (double)k * (double)l / (double)fft_size;
+          double c = cos(a);
+          double s = sin(a);
+          Hhat_re += h_re[l] * c + h_im[l] * s;
+          Hhat_im += h_im[l] * c - h_re[l] * s;
+        }
+
+        int32_t est_re_i = (int32_t)llround(Hhat_re);
+        int32_t est_im_i = (int32_t)llround(Hhat_im);
+        if (est_re_i > 32767) est_re_i = 32767;
+        if (est_re_i < -32768) est_re_i = -32768;
+        if (est_im_i > 32767) est_im_i = 32767;
+        if (est_im_i < -32768) est_im_i = -32768;
+
+        int idx = ant * fft_size + k;
+        dl_ch_ptr[idx] = ((int32_t)(uint16_t)est_im_i << 16) | (uint16_t)est_re_i;
+
+        int32_t y = rxdataF[idx];
+        int16_t yr = (int16_t)(y & 0xFFFF);
+        int16_t yi = (int16_t)((y >> 16) & 0xFFFF);
+        int32_t dr = est_re_i - yr;
+        int32_t di = est_im_i - yi;
+        err_acc += (uint64_t)(dr * dr + di * di);
+      }
+
+      if (nvar) {
+        uint32_t noise_est = (uint32_t)(err_acc / (uint64_t)(fft_size > 0 ? fft_size : 1));
+        nvar[ant] = (noise_est > 255) ? 255 : noise_est;
+      }
+    }
+
+    free(Hls_re);
+    free(Hls_im);
+    free(h_re);
+    free(h_im);
 }
 
 /* Helper structure to access dlsch parameters without full type definition */
@@ -1083,7 +1146,13 @@ void nr_dlsch_mmse(uint32_t rx_size_symbol,
    */
   
   const uint32_t nb_rb_0 = (length + 11) / 12;
+  const int n_re = (int)(12 * nb_rb_0);
+  const int used_re = (n_re < length) ? n_re : length;
   const int start_idx = symbol * rx_size_symbol;
+
+  if (used_re <= 0) {
+    return;
+  }
   
   /* Step 1: Build H^H*H (Hermitian matrix product) */
   int32_t HH_H_re[nl][nl];
@@ -1097,7 +1166,7 @@ void nr_dlsch_mmse(uint32_t rx_size_symbol,
       
       /* Sum over all RX antennas: H^H[i,rx] * H[rx,j] */
       for (int rx = 0; rx < n_rx; rx++) {
-        for (int k = 0; k < length && k < 48; k++) {
+        for (int k = 0; k < used_re; k++) {
           int32_t h_i = dl_ch_estimates_ext[i * n_rx + rx][k];
           int32_t h_j = dl_ch_estimates_ext[j * n_rx + rx][k];
           
@@ -1172,7 +1241,7 @@ void nr_dlsch_mmse(uint32_t rx_size_symbol,
   /* Step 4: Apply equalization: y' = inv(H^H*H + sigma*I) * y */
   for (int layer = 0; layer < nl; layer++) {
     for (int ant = 0; ant < n_rx; ant++) {
-      for (int idx = 0; idx < (int)(12 * nb_rb_0) && idx < length; idx++) {
+      for (int idx = 0; idx < used_re; idx++) {
         int32_t y = rxdataF_comp[layer][ant][start_idx + idx];
         int16_t y_r = (int16_t)(y & 0xFFFF);
         int16_t y_i = (int16_t)((y >> 16) & 0xFFFF);

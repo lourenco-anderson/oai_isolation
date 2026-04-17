@@ -65,6 +65,55 @@ static inline double gaussian_noise(uint32_t *state)
     return sqrt(-2.0 * log(u1)) * cos(two_pi * u2);
 }
 
+/* Build a frequency-domain channel from a tapped-delay line with exponential PDP. */
+static void build_freq_channel_from_taps(int32_t *out_h,
+                                         int n_sc,
+                                         int taps,
+                                         uint32_t *rng_state)
+{
+    const double two_pi = 6.28318530717958647692;
+    double *h_re = calloc((size_t)taps, sizeof(double));
+    double *h_im = calloc((size_t)taps, sizeof(double));
+    if (!h_re || !h_im) {
+        free(h_re);
+        free(h_im);
+        memset(out_h, 0, (size_t)n_sc * sizeof(int32_t));
+        return;
+    }
+
+    /* Exponential power-delay profile: stronger early taps, weaker late taps. */
+    const double tau = (taps > 1) ? ((double)taps / 3.0) : 1.0;
+    for (int l = 0; l < taps; l++) {
+        double p = exp(-(double)l / tau);
+        double amp = sqrt(p);
+        h_re[l] = amp * gaussian_noise(rng_state) * 1500.0;
+        h_im[l] = amp * gaussian_noise(rng_state) * 1500.0;
+    }
+
+    for (int k = 0; k < n_sc; k++) {
+        double H_re = 0.0;
+        double H_im = 0.0;
+        for (int l = 0; l < taps; l++) {
+            double a = two_pi * (double)k * (double)l / (double)n_sc;
+            double c = cos(a);
+            double s = sin(a);
+            H_re += h_re[l] * c + h_im[l] * s;
+            H_im += h_im[l] * c - h_re[l] * s;
+        }
+
+        int32_t hr = (int32_t)llround(H_re);
+        int32_t hi = (int32_t)llround(H_im);
+        if (hr > 32767) hr = 32767;
+        if (hr < -32768) hr = -32768;
+        if (hi > 32767) hi = 32767;
+        if (hi < -32768) hi = -32768;
+        out_h[k] = ((int32_t)(uint16_t)hi << 16) | (uint16_t)hr;
+    }
+
+    free(h_re);
+    free(h_im);
+}
+
 /* Helper: read integer from environment with default */
 static int getenv_int(const char *name, int defval)
 {
@@ -236,6 +285,7 @@ void nr_precoding()
 
     /* Precoding parameters: configurable via environment variables */
     const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
+    const int nb_antennas_tx = getenv_int("OAI_NB_TX", 2);      /* TX antennas */
     const int nb_rb       = getenv_int("OAI_RB", 52);           /* e.g., 52 for 10 MHz */
     const int mod_order   = getenv_int("OAI_MOD_ORDER", 6);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
@@ -254,7 +304,7 @@ void nr_precoding()
         .N_RB_DL = nb_rb,                   /* Match configured RBs */
         .ofdm_symbol_size = symbol_sz,
         .first_carrier_offset = 0,
-        .nb_antennas_tx = 2,
+        .nb_antennas_tx = nb_antennas_tx,
         .samples_per_slot_wCP = symbol_sz * 14  /* 14 symbols per slot */
     };
     ctx->frame_parms = &frame_parms;
@@ -276,8 +326,8 @@ void nr_precoding()
     };
     ctx->rel15 = &rel15;
 
-    printf("Precoding loop: layers=%d, RBs=%d, mod_order=%d, symbol_sz=%d, symbols/slot=%d\n", 
-           nb_layers, nb_rb, mod_order, symbol_sz, nb_symbols);
+        printf("Precoding loop: layers=%d, tx_antennas=%d, RBs=%d, mod_order=%d, symbol_sz=%d, symbols/slot=%d\n", 
+            nb_layers, nb_antennas_tx, nb_rb, mod_order, symbol_sz, nb_symbols);
 
     /* Main precoding loop: iterate and call do_onelayer for each symbol */
     for (int iter = 0; iter < num_iterations; iter++) {
@@ -440,7 +490,7 @@ void nr_crc(){
 	}
 
 	printf("\nEnd\n");
-    }
+}
 
 /* Fill input buffer with random 16-QAM symbols in OAI split-complex format */
 void fill_random_16qam(int32_t *input, int fftsize)
@@ -871,13 +921,18 @@ void nr_ch_estimation()
     const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int snr_db = getenv_int("OAI_SNR", 10); /* SNR in dB (higher = cleaner signal) */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 48); /* configurable channel taps */
     
+    if (channel_taps < 1) channel_taps = 1;
+    if (channel_taps > 100) channel_taps = 100;
+    if (channel_taps > ofdm_symbol_size) channel_taps = ofdm_symbol_size;
+
     /* Compute noise standard deviation from SNR: SNR_dB = 10*log10(P_signal / P_noise) */
     double snr_linear = pow(10.0, snr_db / 10.0);
     double noise_std = sqrt(1.0 / snr_linear); /* assuming signal power = 1 */
     
-    printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d, SNR=%d dB (noise_std=%.4f)\n",
-           nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot, snr_db, noise_std);
+        printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d, SNR=%d dB, taps=%d (noise_std=%.4f)\n",
+            nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot, snr_db, channel_taps, noise_std);
     
     /* Minimal frame-like struct expected by the stub */
     struct mini_fp { int ofdm_symbol_size; int N_RB_DL; int nb_antennas_rx; } mini_fp = {
@@ -983,9 +1038,13 @@ void nr_ch_estimation()
                     int32_t y = rxdataF_data[base + k];
                     int16_t yr = (int16_t)(y & 0xFFFF);
                     int16_t yi = (int16_t)((y >> 16) & 0xFFFF);
-                    int16_t hr = (int16_t)(yr / pr);
-                    int16_t hi = (int16_t)(yi / pr);
-                    dl_ch_data[base + k] = ((int32_t)(uint16_t)hi << 16) | (uint16_t)hr;
+                    if (k < channel_taps) {
+                        int16_t hr = (int16_t)(yr / pr);
+                        int16_t hi = (int16_t)(yi / pr);
+                        dl_ch_data[base + k] = ((int32_t)(uint16_t)hi << 16) | (uint16_t)hr;
+                    } else {
+                        dl_ch_data[base + k] = 0;
+                    }
                 }
             }
         } else {
@@ -1525,9 +1584,16 @@ void nr_mmse_eq()
     const unsigned char nl = 4;                 /* 4 layers (MIMO) */
     const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
     const unsigned char mod_order = 6;          /* 16-QAM */
-    const int length = rx_size_symbol;          /* Process full symbol */
     const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 48);      /* configurable channel taps */
+
+    if (channel_taps < 1) channel_taps = 1;
+    if (channel_taps > 100) channel_taps = 100;
+
+    /* MMSE works over allocated REs; taps shape channel frequency selectivity. */
+    int length = (int)(12 * nb_rb);
+    if (length > (int)rx_size_symbol) length = (int)rx_size_symbol;
 
     /* Derive noise variance from SNR (Es/N0) assuming unit symbol energy */
     const double snr_lin = pow(10.0, snr_db / 10.0);
@@ -1536,7 +1602,7 @@ void nr_mmse_eq()
     
         printf("MMSE EQ parameters: rx_size=%u, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
             rx_size_symbol, n_rx, nl, nb_rb, mod_order);
-        printf("length=%d, SNR=%d dB, noise_var=%u\n", length, snr_db, noise_var);
+        printf("length=%d RE, SNR=%d dB, taps=%d, noise_var=%u\n", length, snr_db, channel_taps, noise_var);
         printf("Running %d iterations...\n", num_iterations);
     printf("NOTE: Using simplified MMSE wrapper (demonstrates structure)\n\n");
     
@@ -1614,16 +1680,11 @@ void nr_mmse_eq()
         }
     }
     
-    /* Seed channel estimates with HIGH amplitude values (stable channel) */
-    const int32_t sample_ch[] = {
-        0x30003000, 0x2F002F00, 0x31003100, 0x30003000
-    };
+    /* Build channel estimates from a tapped-delay model for physical consistency. */
+    uint32_t ch_seed = 0xC0FFEE01u;
     for (int idx = 0; idx < matrixSz; idx++) {
-        for (int i = 0; i < length; i++) {
-            int16_t ch_r = (int16_t)(12000 + ((idx*1000+i)%4000) - 2000);
-            int16_t ch_i = (int16_t)(11000 + ((idx*1200+i)%3500) - 1750);
-            dl_ch_estimates_ext[idx][i] = ((int32_t)ch_i << 16) | (int32_t)(uint16_t)ch_r;
-        }
+        ch_seed = ch_seed * 1103515245u + 12345u + (uint32_t)idx;
+        build_freq_channel_from_taps(dl_ch_estimates_ext[idx], length, channel_taps, &ch_seed);
     }
     
     /* Seed channel magnitude buffers with typical values for 16-QAM */
