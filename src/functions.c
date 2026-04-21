@@ -510,24 +510,30 @@ void nr_scramble(){
 }
 
 void nr_crc(){
+    const int n_bits = 40976;
+    const size_t n_bytes = (size_t)n_bits / 8;
+    unsigned char *crc_buf = malloc(n_bytes);
+
     printf("Start\n");
-    // define here the size of N
-    const int N = 40976;
-	unsigned char data[N / 8];
+    if (!crc_buf) {
+        printf("nr_crc: data allocation failed\n");
+        return;
+    }
 	srand(time(NULL));
 	// Loop for 1000000 executions
 	for (long long i = 0; i < 5000000; ++i) {
 		printf("\rIteration: %lld", i);
 		// Loop for CRC code
-		for (int j = 0; j < N / 8; ++j){
-			data[j] = rand() & 0xFF;
+        for (size_t j = 0; j < n_bytes; ++j){
+			crc_buf[j] = rand() & 0xFF;
 		}
 
-		volatile unsigned int crc = crc24a(data, sizeof(data));
+		volatile unsigned int crc = crc24a(crc_buf, n_bytes);
 		(void)crc; // suppress unused variable warning
 	}
 
 	printf("\nEnd\n");
+	free(crc_buf);
 }
 
 /* Fill input buffer with random 16-QAM symbols in OAI split-complex format */
