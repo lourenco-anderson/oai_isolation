@@ -131,6 +131,38 @@ static int getenv_int(const char *name, int defval)
     return (int)v;
 }
 
+static int normalize_scs_khz(int scs_khz)
+{
+    switch (scs_khz) {
+        case 15:
+        case 30:
+        case 60:
+        case 120:
+            return scs_khz;
+        default:
+            return 30;
+    }
+}
+
+static int getenv_fft_size(const char *name, int defval)
+{
+    int fftsize = getenv_int(name, defval);
+    if (fftsize < 256) {
+        fftsize = 256;
+    }
+    return fftsize;
+}
+
+static int derive_cp_samples(int fftsize, int scs_khz)
+{
+    double cp = 88.0 * ((double)fftsize / 1024.0) * (30.0 / (double)scs_khz);
+    int cp_samples = (int)llround(cp);
+    if (cp_samples < 16) {
+        cp_samples = 16;
+    }
+    return cp_samples;
+}
+
 /* Initialize OFDM context: load dfts lib (path via env or default), allocate aligned buffers */
 static ofdm_ctx_t *ofdm_init(const char *dfts_path, int fftsize, int nb_symbols, int nb_prefix_samples, int nb_tx)
 {
@@ -479,6 +511,8 @@ void nr_scramble(){
 
 void nr_crc(){
     printf("Start\n");
+    // define here the size of N
+    const int N = 40976;
 	unsigned char data[N / 8];
 	srand(time(NULL));
 	// Loop for 1000000 executions
@@ -533,16 +567,14 @@ void nr_ofdm_modulation()
     }
 
     /* Group core parameters together */
-    const int fftsize        = 1024;
+    const int scs_khz        = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int fftsize        = getenv_fft_size("OAI_FFTSIZE", 1024);
+    const int nb_prefix_samples = derive_cp_samples(fftsize, scs_khz);
     const int nb_symbols     = 14;          // number of OFDM symbols
     const int num_iterations = 10000000;   // number of iterations
     const int nb_tx          = 8;          // number of transmit antennas
-
-    /* Automate CP length according to FFT size (1024 or 2048) */
-    const int nb_prefix_samples = (fftsize == 2048)
-                                  ? 176
-                                  : (fftsize == 1024 ? 88 : (176 * fftsize / 2048));
     const Extension_t extype    = CYCLIC_PREFIX;
+    const double sample_rate_mhz = ((double)fftsize * (double)scs_khz) / 1000.0;
 
     /* Initialize context and buffers once, reuse across iterations */
     ofdm_ctx_t *ctx = ofdm_init("/home/anderson/dev/oai_isolation/ext/openair/cmake_targets/ran_build/build/libdfts.so",
@@ -553,8 +585,8 @@ void nr_ofdm_modulation()
     }
 
     printf("=== Starting OFDM modulation tests (16-QAM random input) ===\n");
-    printf("Parameters: fftsize=%d, nb_symbols=%d, nb_prefix_samples=%d, nb_tx=%d, iterations=%d\n",
-           fftsize, nb_symbols, nb_prefix_samples, nb_tx, num_iterations);
+    printf("Parameters: scs=%d kHz, fftsize=%d, cp=%d, fs=%.2f MHz, nb_symbols=%d, nb_tx=%d, iterations=%d\n",
+           scs_khz, fftsize, nb_prefix_samples, sample_rate_mhz, nb_symbols, nb_tx, num_iterations);
 
     for (int iter = 0; iter < num_iterations; iter++) {
         if ((iter % 10) == 0) printf("\n--- OFDM modulation iteration %d ---\n", iter);
@@ -916,17 +948,20 @@ void nr_ch_estimation()
     printf("=== Starting NR Channel Estimation (PDSCH) tests ===\n");
     
     /* Channel estimation parameters */
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
+    const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
+    const double sample_rate_mhz = ((double)ofdm_symbol_size * (double)scs_khz) / 1000.0;
     const int nb_antennas_rx = 4;           /* RX antennas */
     const int nb_antennas_tx = 8;           /* TX antennas */
     const int nb_rb_pdsch = 52;            /* 106 RBs = 20 MHz */
-    const int ofdm_symbol_size = 1024;      /* FFT size (use 2048 to fit 106 PRBs) */
     const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = getenv_int("OAI_SNR", 10); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 7); /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47); /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -936,8 +971,8 @@ void nr_ch_estimation()
     double snr_linear = pow(10.0, snr_db / 10.0);
     double noise_std = sqrt(1.0 / snr_linear); /* assuming signal power = 1 */
     
-        printf("Channel estimation parameters: RX ant=%d, RB=%d, FFT=%d, symbols=%d, SNR=%d dB, taps=%d (noise_std=%.4f)\n",
-            nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, symbols_per_slot, snr_db, channel_taps, noise_std);
+        printf("Channel estimation parameters: scs=%d kHz, RX ant=%d, RB=%d, FFT=%d, CP=%d, fs=%.2f MHz, symbols=%d, SNR=%d dB, taps=%d (noise_std=%.4f)\n",
+            scs_khz, nb_antennas_rx, nb_rb_pdsch, ofdm_symbol_size, nb_prefix_samples, sample_rate_mhz, symbols_per_slot, snr_db, channel_taps, noise_std);
     
     /* Minimal frame-like struct expected by the stub */
     struct mini_fp { int ofdm_symbol_size; int N_RB_DL; int nb_antennas_rx; } mini_fp = {
@@ -1410,7 +1445,10 @@ void nr_soft_demod()
     printf("=== Starting NR Soft Demodulation (LLR computation) tests ===\n");
     
     /* Soft demodulation parameters */
-    const uint32_t rx_size_symbol = 1024;       /* FFT size per symbol */
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
+    const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
+    const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
     const int nbRx = 4;                         /* 2 RX antennas */
     const int Nl = 2;                           /* 2 layers */
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
@@ -1420,8 +1458,8 @@ void nr_soft_demod()
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
     const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
-        printf("Soft demod parameters: rx_symbol_size=%u, nbRx=%d, Nl=%d, len=%u\n",
-            rx_size_symbol, nbRx, Nl, len);
+        printf("Soft demod parameters: scs=%d kHz, rx_symbol_size=%u, CP=%d, fs=%.2f MHz, nbRx=%d, Nl=%d, len=%u\n",
+            scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, nbRx, Nl, len);
         printf("mod_order=%d, SNR=%d dB\n", mod_order, snr_db);
         printf("Running %d iterations...\n", num_iterations);
     
@@ -1581,7 +1619,10 @@ void nr_mmse_eq()
     printf("=== Starting NR MMSE Equalization tests ===\n");
     
     /* MMSE equalization parameters */
-    const uint32_t rx_size_symbol = 1024;       /* FFT size per symbol */
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
+    const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
+    const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
     const unsigned char n_rx = 4;               /* 4 RX antennas */
     const unsigned char nl = 4;                 /* 4 layers (MIMO) */
     const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
@@ -1602,8 +1643,8 @@ void nr_mmse_eq()
     const double noise_var_f = 1.0 / snr_lin;   /* Es=1 -> N0 */
     const uint32_t noise_var = (uint32_t)(noise_var_f * (1u << 15)); /* scaled for fixed-point path */
     
-        printf("MMSE EQ parameters: rx_size=%u, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
-            rx_size_symbol, n_rx, nl, nb_rb, mod_order);
+        printf("MMSE EQ parameters: scs=%d kHz, rx_size=%u, CP=%d, fs=%.2f MHz, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
+            scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, n_rx, nl, nb_rb, mod_order);
         printf("length=%d RE, SNR=%d dB, taps=%d, noise_var=%u\n", length, snr_db, channel_taps, noise_var);
         printf("Running %d iterations...\n", num_iterations);
     printf("NOTE: Using simplified MMSE wrapper (demonstrates structure)\n\n");
@@ -1957,20 +1998,19 @@ void nr_ofdm_demo()
     printf("=== Starting NR OFDM FEP Demonstration ===\n");
     
     /* OFDM Frame Parameters */
-    const int ofdm_symbol_size = 1024;      /* FFT size */
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
+    const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const int nb_antennas_rx = 4;           /* 4 RX antennas */
     const int nb_antennas_tx = 8;           /* 8 TX antennas */
     const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
     const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
-    /* Automate CP length according to FFT size (1024 or 2048) */
-    const int nb_prefix_samples = (ofdm_symbol_size == 2048)
-                                  ? 176
-                                  : (ofdm_symbol_size == 1024 ? 88 : (176 * ofdm_symbol_size / 2048));
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;
+    const double sample_rate_mhz = ((double)ofdm_symbol_size * (double)scs_khz) / 1000.0;
     const int num_iterations = 10000000;
     
-    printf("OFDM parameters: FFT=%d, CP=%d, symbols/slot=%d, antennas=%d\n",
-           ofdm_symbol_size, nb_prefix_samples, symbols_per_slot, nb_antennas_rx);
+    printf("OFDM parameters: scs=%d kHz, FFT=%d, CP=%d, fs=%.2f MHz, symbols/slot=%d, antennas=%d\n",
+           scs_khz, ofdm_symbol_size, nb_prefix_samples, sample_rate_mhz, symbols_per_slot, nb_antennas_rx);
     
     /* Allocate RX data buffers (aligned) */
     int32_t *rxdata = aligned_alloc(32, samples_per_frame * sizeof(int32_t));
