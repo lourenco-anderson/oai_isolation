@@ -11,6 +11,10 @@
 #include "PHY/CODING/nrLDPC_extern.h"
 #include <dlfcn.h>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* Gray-coded amplitude levels for 16-QAM */
 static const int32_t qam16_levels[4] = { -3, -1, +1, +3 };
 
@@ -920,8 +924,9 @@ void nr_ch_estimation()
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
+    const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = getenv_int("OAI_SNR", 10); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 48); /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 7); /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -963,11 +968,8 @@ void nr_ch_estimation()
     
     printf("Running %d iterations of PDSCH channel estimation...\n", num_iterations);
 
-    int use_real = 0;
-    const char *use_real_env = getenv("OAI_USE_REAL_EST");
-    if (use_real_env && (*use_real_env == '1')) {
+    if (use_real) {
         printf("Using REAL OAI channel estimation path (nr_pdsch_channel_estimation).\n");
-        use_real = 1;
     } else {
         printf("Using simplified LS channel estimation path. Set OAI_USE_REAL_EST=1 to enable real path.\n");
     }
