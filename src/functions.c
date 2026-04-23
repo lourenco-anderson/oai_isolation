@@ -321,9 +321,9 @@ void nr_precoding()
 
     /* Precoding parameters: configurable via environment variables */
     const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
-    const int nb_antennas_tx = getenv_int("OAI_NB_TX", 2);      /* TX antennas */
+    const int nb_antennas_tx = getenv_int("OAI_NB_TX", 4);      /* TX antennas */
     const int nb_rb       = getenv_int("OAI_RB", 52);           /* e.g., 52 for 10 MHz */
-    const int mod_order   = getenv_int("OAI_MOD_ORDER", 6);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+    const int mod_order   = getenv_int("OAI_MOD_ORDER", 2);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
     const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 50000000); /* elevated iterations */
@@ -451,7 +451,7 @@ void nr_scramble(){
     logInit();
     
     /* Requested parameters */
-    const uint32_t size   = 82368;      /* bits */
+    const uint32_t size   = 54912;      /* bits */
     const uint8_t  q      = 0;
     const uint32_t Nid    = 0;
     const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -510,7 +510,7 @@ void nr_scramble(){
 }
 
 void nr_crc(){
-    const int n_bits = 40976;
+    const int n_bits = 12040;
     const size_t n_bytes = (size_t)n_bits / 8;
     unsigned char *crc_buf = malloc(n_bytes);
 
@@ -578,7 +578,7 @@ void nr_ofdm_modulation()
     const int nb_prefix_samples = derive_cp_samples(fftsize, scs_khz);
     const int nb_symbols     = 14;          // number of OFDM symbols
     const int num_iterations = 10000000;   // number of iterations
-    const int nb_tx          = 8;          // number of transmit antennas
+    const int nb_tx          = 4;          // number of transmit antennas
     const Extension_t extype    = CYCLIC_PREFIX;
     const double sample_rate_mhz = ((double)fftsize * (double)scs_khz) / 1000.0;
 
@@ -646,8 +646,8 @@ void nr_modulation_test()
     logInit();
     
     /* Test parameters - configurable modulation and length */
-    const uint32_t modulation_order = 6;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
-    const uint32_t length = 82368;            /* Input bits per iteration */
+    const uint32_t modulation_order = 2;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
+    const uint32_t length = 24960;            /* Input bits per iteration */
     const int num_iterations = 10000000;       /* Number of test runs */
     
     /* Map modulation order to table and name */
@@ -848,55 +848,51 @@ void nr_layermapping()
 
 void nr_ldpc()
 {
-    /* Initialize the logging system first */
-    logInit();
-    
     printf("=== Starting NR LDPC Encoder tests ===\n");
     
-    /* LDPC encoder parameters */
-    const int BG = 1;                       /* Base Graph 1 (default) */
-    const int Zc = 384;                     /* Lifting size (must be valid for BG1) */
-    const int Kb = 22;                      /* Information bit columns */
-    const int K = Kb * Zc;                  /* Total information bits */
-    const int num_runs = 10000000;                /* Number of test runs */
-    const int n_segments = 1;               /* Single transport block segment */
-    
-    /* Calculate code rate and output size */
-    int nrows = (BG == 1) ? 46 : 42;        /* Parity check rows */
-    int rate = (BG == 1) ? 3 : 5;           /* Code rate */
+    const int BG = 1;
+    const int Zc = 288;
+    const int Kb = 22;
+    const int K = Kb * Zc;
+    const int num_runs = 10000000;
+    const int n_segments = 2;
+
+    int nrows = (BG == 1) ? 46 : 42;
+    int Nb = (BG == 1) ? 68 : 52;
+    int rate = (BG == 1) ? 3 : 5;
     int no_punctured_columns = ((nrows - 2) * Zc + K - K * rate) / Zc;
     int removed_bit = (nrows - no_punctured_columns - 2) * Zc + K - (int)(K * rate);
-    int output_length = K / 8 + ((nrows - no_punctured_columns) * Zc - removed_bit) / 8;
-    
-    /* Add extra buffer to prevent overrun issues */
+
+    /* OAI encoder output is byte-per-bit (unpacked), not packed bytes. */
+    int output_length = (K - 2 * Zc)
+                        + (nrows - no_punctured_columns) * Zc - removed_bit;
+
     int output_buffer_size = output_length + 4096;
+    int progress_step = (num_runs / 5) > 0 ? (num_runs / 5) : 1;
     
     printf("LDPC parameters: BG=%d, Zc=%d, Kb=%d, K=%d bits\n", BG, Zc, Kb, K);
-    printf("Output size: %d bytes (buffer: %d bytes)\n", output_length, output_buffer_size);
+    printf("Output size: %d bytes byte-per-bit (expected=%d, buffer=%d)\n",
+           output_length, (Nb - 2) * Zc, output_buffer_size);
     printf("Running %d test runs...\n", num_runs);
-    
-    /* Allocate input buffer - only for the single segment we need */
+
     uint8_t *input_seg = malloc((K + 7) / 8);
     if (!input_seg) {
-        printf("nr_ldpc: input buffer allocation failed\n");
+        printf("alloc failed\n");
         return;
     }
     memset(input_seg, 0, (K + 7) / 8);
-    
-    /* Create array of pointers for the encoder (expects uint8_t **) */
+
     uint8_t *input[1];
     input[0] = input_seg;
-    
-    /* Allocate output buffer */
+
     uint8_t *output = malloc(output_buffer_size);
     if (!output) {
-        printf("nr_ldpc: output buffer allocation failed\n");
         free(input_seg);
+        printf("alloc failed\n");
         return;
     }
     memset(output, 0, output_buffer_size);
-    
-    /* LDPC encoder parameters structure */
+
     encoder_implemparams_t encoder_params = {
         .BG = BG,
         .Zc = Zc,
@@ -904,42 +900,42 @@ void nr_ldpc()
         .K = K,
         .n_segments = n_segments,
         .first_seg = 0,
+        .gen_code = 1,
         .tinput = NULL,
         .tprep = NULL,
-        .tparity = NULL
+        .tparity = NULL,
+        .toutput = NULL,
     };
-    
+
     printf("Starting LDPC encoding test loop...\n");
-    
-    /* Main LDPC encoding loop */
+
     for (int iter = 0; iter < num_runs; iter++) {
-        /* Fill input buffer with test pattern - varies per iteration */
         uint32_t pattern = (iter % 2) ? 0x55 : 0xAA;
-        
         for (int byte_idx = 0; byte_idx < (K + 7) / 8; byte_idx++) {
             input_seg[byte_idx] = (uint8_t)(pattern ^ (byte_idx ^ iter));
         }
-        
-        /* Call LDPC encoder */
+
+        /* Mandatory filler bits for OAI LDPC path. */
+        memset(input_seg, 0, (2 * Zc) / 8);
+
         int result = LDPCencoder(input, output, &encoder_params);
-        
-        if ((iter % 5) == 0) {
-            printf("  iter %2d: encoder returned %d, output[0..3]=0x%02X 0x%02X 0x%02X 0x%02X\n", 
+
+        if ((iter % progress_step) == 0) {
+            printf("  iter %2d: ret=%d, bpb[0..3]=%d %d %d %d\n",
                    iter, result,
-                   output[0], output[1], output[2], output[3]);
+                   output[0] & 1, output[1] & 1, output[2] & 1, output[3] & 1);
         }
-        
+
         if (result != 0) {
             printf("ERROR: LDPCencoder failed at run %d\n", iter);
         }
     }
-    
-    printf("\n=== Final LDPC encoded output (first 16 bytes) ===\n");
+
+    printf("\n=== Final output (byte-per-bit, primeiros 16 bits) ===\n");
     for (int i = 0; i < 16 && i < output_length; i++) {
-        printf("output[%02d] = 0x%02X\n", i, output[i]);
+        printf("output[%02d] = %d\n", i, output[i] & 1);
     }
-    
-    /* Cleanup */
+
     free(input_seg);
     free(output);
     printf("=== NR LDPC Encoder tests completed ===\n");
@@ -954,20 +950,20 @@ void nr_ch_estimation()
     printf("=== Starting NR Channel Estimation (PDSCH) tests ===\n");
     
     /* Channel estimation parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const double sample_rate_mhz = ((double)ofdm_symbol_size * (double)scs_khz) / 1000.0;
     const int nb_antennas_rx = 4;           /* RX antennas */
-    const int nb_antennas_tx = 8;           /* TX antennas */
+    const int nb_antennas_tx = 4;           /* TX antennas */
     const int nb_rb_pdsch = 52;            /* 106 RBs = 20 MHz */
     const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* lighter default */
+    const int num_iterations = getenv_int("OAI_ITERS", 100000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = getenv_int("OAI_SNR", 10); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47); /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 7); /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1165,7 +1161,7 @@ void nr_descrambling()
     printf("=== Starting NR DLSCH Descrambling tests ===\n");
     
         /* Descrambling parameters (mirrors nr_scramble style) */
-        const uint32_t size = 82368;        /* bits/LLRs */
+        const uint32_t size = 24960;        /* bits/LLRs */
         const uint8_t q = 0;
         const uint32_t Nid = 0;
         const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -1235,7 +1231,7 @@ void nr_layer_demapping_test()
     
     /* Layer demapping parameters */
     const uint8_t Nl = 2;                   /* 2 layers */
-    const uint8_t mod_order = 4;            /* 16-QAM (4 bits per symbol) */
+    const uint8_t mod_order = 2;            /* 16-QAM (4 bits per symbol) */
     const uint32_t length = 13728;           /* Total LLRs to process */
     const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
     const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
@@ -1327,7 +1323,7 @@ void nr_crc_check()
     crcTableInit();
     
     /* CRC check parameters */
-    const uint32_t payload_bits = 40976  ;     /* Payload length in bits (without CRC) */
+    const uint32_t payload_bits = 12040  ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
     const int num_iterations = 10000000;        /* 1e7 iterations */
@@ -1451,7 +1447,7 @@ void nr_soft_demod()
     printf("=== Starting NR Soft Demodulation (LLR computation) tests ===\n");
     
     /* Soft demodulation parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
@@ -1462,7 +1458,7 @@ void nr_soft_demod()
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
     const int num_iterations = getenv_int("OAI_ITERS", 10000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
-    const int mod_order = getenv_int("OAI_MOD_ORDER", 6);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
+    const int mod_order = getenv_int("OAI_MOD_ORDER", 2);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
         printf("Soft demod parameters: scs=%d kHz, rx_symbol_size=%u, CP=%d, fs=%.2f MHz, nbRx=%d, Nl=%d, len=%u\n",
             scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, nbRx, Nl, len);
@@ -1625,17 +1621,17 @@ void nr_mmse_eq()
     printf("=== Starting NR MMSE Equalization tests ===\n");
     
     /* MMSE equalization parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
     const unsigned char n_rx = 4;               /* 4 RX antennas */
     const unsigned char nl = 4;                 /* 4 layers (MIMO) */
     const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
-    const unsigned char mod_order = 6;          /* 16-QAM */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const unsigned char mod_order = 2;          /* 16-QAM */
+    const int num_iterations = getenv_int("OAI_ITERS", 100000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 10);               /* SNR in dB */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 48);      /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 7);      /* configurable channel taps */
 
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1834,9 +1830,9 @@ void nr_ldpc_dec()
     
     /* LDPC decoder parameters */
     const uint8_t BG = 1;                       /* Base Graph 1 */
-    const uint16_t Z = 384;                     /* Lifting size */
+    const uint16_t Z = 288;                     /* Lifting size */
     const uint8_t R = 15;                       /* Decoding rate 1/3 */
-    const uint8_t numMaxIter = 6;               /* Maximum iterations */
+    const uint8_t numMaxIter = 3;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
     const int num_iterations = getenv_int("OAI_ITERS", 500000); /* Allow fast smoke tests */
     const int snr_db = getenv_int("OAI_SNR", 10);             /* BPSK Eb/N0 in dB (high by default) */
@@ -1924,10 +1920,7 @@ void nr_ldpc_dec()
         .tinput = NULL,
         .tprep = NULL,
         .tparity = NULL,
-        .toutput = NULL,
-        .F = 0,
-        .output = NULL,
-        .ans = NULL
+        .toutput = NULL
     };
     
     /* Main LDPC decoding loop */
@@ -2004,11 +1997,11 @@ void nr_ofdm_demo()
     printf("=== Starting NR OFDM FEP Demonstration ===\n");
     
     /* OFDM Frame Parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const int nb_antennas_rx = 4;           /* 4 RX antennas */
-    const int nb_antennas_tx = 8;           /* 8 TX antennas */
+    const int nb_antennas_tx = 4;           /* 4 TX antennas */
     const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
     const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;

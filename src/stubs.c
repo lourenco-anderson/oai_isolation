@@ -395,6 +395,12 @@ void thread_top_init(char *thread_name, int affinity, uint64_t runtime, uint64_t
 /* CPU measurement flag for LDPC encoder */
 int cpu_meas_enabled = 0;
 
+/* Set to 1 only for fallback builds without real LDPC encoder sources. */
+#ifndef USE_STUB_LDPC_ENCODER
+#define USE_STUB_LDPC_ENCODER 0
+#endif
+
+#if USE_STUB_LDPC_ENCODER
 /* LDPC encoder parameter structure */
 typedef struct {
   unsigned int n_segments;
@@ -489,6 +495,7 @@ int LDPCencoder(uint8_t **input, uint8_t *output, encoder_implemparams_t *impp)
     
     return 0;  /* Success */
 }
+  #endif
 
 /* ============================================================
  * DLSCH UNSCRAMBLING - nr_dlsch_unscrambling

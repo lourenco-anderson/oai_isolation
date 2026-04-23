@@ -4,6 +4,15 @@ project(OAI_ISOLATION C)
 # Gather all C sources in src/
 file(GLOB_RECURSE SOURCES "src/*.c")
 
+# ldpc_v_oai/oai_encoder contains multiple alternative LDPCencoder implementations.
+# Keep only the adapter (which includes the selected optimized implementation) to
+# avoid duplicate symbol definitions at link time.
+list(FILTER SOURCES EXCLUDE REGEX "src/ldpc_v_oai/src/oai_encoder/.*\\.c$")
+list(APPEND SOURCES
+    "src/ldpc_v_oai/src/oai_encoder/oai_encoder_adapter.c"
+    "src/ldpc_v_oai/src/ldpc_helpers.c"
+)
+
 # Explicitly add the new onelayer file
 list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
 
@@ -11,15 +20,13 @@ list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
 # Instead, we link against the compiled OAI PHY libraries that contain it
 # list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_decoder/nrLDPC_decoder.c")
 
-# NOTE: LDPC encoder real compilation is disabled due to memory corruption issues
-# with OAI library linkage. Use mock implementation in stubs.c instead.
-# list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_encoder/ldpc_encoder_optim8segmulti.c")
+# NOTE: We use the standalone OAI LDPC adapter from src/ldpc_v_oai/src/oai_encoder.
 
 # Path to OAI build output
 set(OAI_BUILD_DIR "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build")
 
 # Create the executable
-add_executable(oai_isolation ${SOURCES} src/stubs.c)
+add_executable(oai_isolation ${SOURCES})
 
 # Include directories
 target_include_directories(oai_isolation PUBLIC 
@@ -44,6 +51,8 @@ target_include_directories(oai_isolation PUBLIC
     "${CMAKE_SOURCE_DIR}/ext/openair/radio/COMMON/"
     "${CMAKE_SOURCE_DIR}/ext/openair/nfapi/open-nFAPI/nfapi/public_inc/"
     "${CMAKE_SOURCE_DIR}/ext/openair/openair2/UTIL/OMV/"
+    "${CMAKE_SOURCE_DIR}/src/ldpc_v_oai/include"
+    "${CMAKE_SOURCE_DIR}/src/ldpc_v_oai/src/oai_encoder"
 )
 
 # Compile definitions
