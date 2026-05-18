@@ -12,7 +12,7 @@
 #include <dlfcn.h>
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323526
+#define M_PI 3.14159265358979323846
 #endif
 
 /* Gray-coded amplitude levels for 16-QAM */
@@ -323,7 +323,7 @@ void nr_precoding()
     const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
     const int nb_antennas_tx = getenv_int("OAI_NB_TX", 8);      /* TX antennas */
     const int nb_rb       = getenv_int("OAI_RB", 52);           /* e.g., 52 for 10 MHz */
-    const int mod_order   = getenv_int("OAI_MOD_ORDER", 2);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+    const int mod_order   = getenv_int("OAI_MOD_ORDER", 4);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
     const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
@@ -451,7 +451,7 @@ void nr_scramble(){
     logInit();
     
     /* Requested parameters */
-    const uint32_t size   = 27456;      /* bits */
+    const uint32_t size   = 54912;      /* bits */
     const uint8_t  q      = 0;
     const uint32_t Nid    = 0;
     const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -510,7 +510,7 @@ void nr_scramble(){
 }
 
 void nr_crc(){
-    const int n_bits = 14600;
+    const int n_bits = 24072;
     const size_t n_bytes = (size_t)n_bits / 8;
     unsigned char *crc_buf = malloc(n_bytes);
 
@@ -646,8 +646,8 @@ void nr_modulation_test()
     logInit();
     
     /* Test parameters - configurable modulation and length */
-    const uint32_t modulation_order = 2;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
-    const uint32_t length = 27456;            /* Input bits per iteration */
+    const uint32_t modulation_order = 4;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
+    const uint32_t length = 54912;            /* Input bits per iteration */
     const int num_iterations = 10000000;       /* Number of test runs */
     
     /* Map modulation order to table and name */
@@ -851,7 +851,7 @@ void nr_ldpc()
     printf("=== Starting NR LDPC Encoder tests ===\n");
     
     const int BG = 1;
-    const int Zc = 352;
+    const int Zc = 384;
     const int Kb = 22;
     const int K = Kb * Zc;
     const int num_runs = 10000000;
@@ -962,8 +962,8 @@ void nr_ch_estimation()
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
-    const int snr_db = getenv_int("OAI_SNR", 0); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 11); /* configurable channel taps */
+    const int snr_db = getenv_int("OAI_SNR", 5); /* SNR in dB (higher = cleaner signal) */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47); /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1161,7 +1161,7 @@ void nr_descrambling()
     printf("=== Starting NR DLSCH Descrambling tests ===\n");
     
         /* Descrambling parameters (mirrors nr_scramble style) */
-        const uint32_t size = 27456;        /* bits/LLRs */
+        const uint32_t size = 54912;        /* bits/LLRs */
         const uint8_t q = 0;
         const uint32_t Nid = 0;
         const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -1323,7 +1323,7 @@ void nr_crc_check()
     crcTableInit();
     
     /* CRC check parameters */
-    const uint32_t payload_bits = 14600  ;     /* Payload length in bits (without CRC) */
+    const uint32_t payload_bits = 24072  ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
     const int num_iterations = 10000000;        /* 1e7 iterations */
@@ -1457,8 +1457,8 @@ void nr_soft_demod()
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
     const int num_iterations = getenv_int("OAI_ITERS", 10000000); /* elevated iterations */
-    const int snr_db = getenv_int("OAI_SNR", 0);                /* SNR in dB */
-    const int mod_order = getenv_int("OAI_MOD_ORDER", 2);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
+    const int snr_db = getenv_int("OAI_SNR", 5);                /* SNR in dB */
+    const int mod_order = getenv_int("OAI_MOD_ORDER", 4);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
         printf("Soft demod parameters: scs=%d kHz, rx_symbol_size=%u, CP=%d, fs=%.2f MHz, nbRx=%d, Nl=%d, len=%u\n",
             scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, nbRx, Nl, len);
@@ -1630,8 +1630,8 @@ void nr_mmse_eq()
     const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
     const unsigned char mod_order = 2;          /* 2-QPSK */
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* elevated iterations */
-    const int snr_db = getenv_int("OAI_SNR", 0);                /* SNR in dB */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 11);      /* configurable channel taps */
+    const int snr_db = getenv_int("OAI_SNR", 5);                /* SNR in dB */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47);      /* configurable channel taps */
 
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1830,12 +1830,12 @@ void nr_ldpc_dec()
     
     /* LDPC decoder parameters */
     const uint8_t BG = 1;                       /* Base Graph 1 */
-    const uint16_t Z = 352;                     /* Lifting size */
+    const uint16_t Z = 384;                     /* Lifting size */
     const uint8_t R = 15;                       /* Decoding rate 1/3 */
     const uint8_t numMaxIter = 3;               /* Maximum iterations */
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
     const int num_iterations = getenv_int("OAI_ITERS", 500000); /* Allow fast smoke tests */
-    const int snr_db = getenv_int("OAI_SNR", 0);             /* BPSK Eb/N0 in dB (high by default) */
+    const int snr_db = getenv_int("OAI_SNR", 5);             /* BPSK Eb/N0 in dB (high by default) */
     
         printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
             BG, Z, R, Kprime);

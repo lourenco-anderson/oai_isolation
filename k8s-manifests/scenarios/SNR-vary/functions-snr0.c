@@ -12,7 +12,7 @@
 #include <dlfcn.h>
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323526
+#define M_PI 3.14159265358979323846
 #endif
 
 /* Gray-coded amplitude levels for 16-QAM */
@@ -326,7 +326,7 @@ void nr_precoding()
     const int mod_order   = getenv_int("OAI_MOD_ORDER", 2);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
     const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
-    const int num_iterations = getenv_int("OAI_ITERS", 1000000); /* elevated iterations */
+    const int num_iterations = getenv_int("OAI_ITERS", 5000000); /* elevated iterations */
 
     /* Initialize precoding context and allocate buffers */
     precoding_ctx_t *ctx = precoding_init(nb_layers, symbol_sz, nb_rb);
@@ -963,7 +963,7 @@ void nr_ch_estimation()
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = getenv_int("OAI_SNR", 0); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 11); /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47); /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1631,7 +1631,7 @@ void nr_mmse_eq()
     const unsigned char mod_order = 2;          /* 2-QPSK */
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 0);                /* SNR in dB */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 11);      /* configurable channel taps */
+    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47);      /* configurable channel taps */
 
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;

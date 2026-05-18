@@ -1,0 +1,294 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-crc
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-crc
+  template:
+    metadata:
+      labels:
+        app: gnb-crc
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-crc
+        image: gnb-crc:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-crc
+  namespace: default
+spec:
+  selector:
+    app: gnb-crc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-layer-map
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-layer-map
+  template:
+    metadata:
+      labels:
+        app: gnb-layer-map
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-layer-map
+        image: gnb-layer_map:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-layer-map
+  namespace: default
+spec:
+  selector:
+    app: gnb-layer-map
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-ldpc
+  template:
+    metadata:
+      labels:
+        app: gnb-ldpc
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-ldpc
+        image: gnb-ldpc:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-ldpc
+  namespace: default
+spec:
+  selector:
+    app: gnb-ldpc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-modulation
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-modulation
+  template:
+    metadata:
+      labels:
+        app: gnb-modulation
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-modulation
+        image: gnb-modulation:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-modulation
+  namespace: default
+spec:
+  selector:
+    app: gnb-modulation
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-ofdm-mod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-ofdm-mod
+  template:
+    metadata:
+      labels:
+        app: gnb-ofdm-mod
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-ofdm-mod
+        image: gnb-ofdm_mod:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-ofdm-mod
+  namespace: default
+spec:
+  selector:
+    app: gnb-ofdm-mod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-precoding
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-precoding
+  template:
+    metadata:
+      labels:
+        app: gnb-precoding
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-precoding
+        image: gnb-precoding:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-precoding
+  namespace: default
+spec:
+  selector:
+    app: gnb-precoding
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gnb-scramble
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: gnb-scramble
+  template:
+    metadata:
+      labels:
+        app: gnb-scramble
+        component: gnb
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: gnb-scramble
+        image: gnb-scramble:30e-9-15khz-snr10-QPSK
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gnb-scramble
+  namespace: default
+spec:
+  selector:
+    app: gnb-scramble
+  ports:
+  - port: 8080
+    targetPort: 8080
