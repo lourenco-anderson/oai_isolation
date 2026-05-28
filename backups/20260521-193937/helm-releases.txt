@@ -1,0 +1,4 @@
+NAME      	NAMESPACE 	REVISION	UPDATED                                	STATUS  	CHART            	APP VERSION
+grafana   	monitoring	1       	2026-01-12 19:37:42.93604716 +0100 CET 	deployed	grafana-10.5.5   	12.3.1     
+kepler    	kepler    	1       	2026-01-12 19:35:26.059806452 +0100 CET	deployed	kepler-0.11.1    	v0.11.1    
+prometheus	monitoring	2       	2026-05-21 18:48:05.17907477 +0200 CEST	deployed	prometheus-29.7.0	v3.11.3    

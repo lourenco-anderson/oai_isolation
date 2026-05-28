@@ -15,6 +15,35 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+static int size_tb = 14600; /* bits */
+static int segments = 2;    /* LDPC segments (1 to 8) */
+static int lift_size = 352; /* Lifting size */
+static int coded_tb_size = 27546; 
+static int g_modulation_order = 2; /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+static int coded_symbols = 13728;
+static int n_layers = 2;
+static int n_tx = 8;
+static int n_rx = 4;
+static int n_taps = 11;
+static int snr_db_input = 0;
+
+
+static int get_central_modulation_order(void)
+{
+    switch (g_modulation_order) {
+        case 2:
+        case 4:
+        case 6:
+        case 8:
+            return g_modulation_order;
+        default:
+            return 2;
+    }
+}
+
+
+
+
 /* Gray-coded amplitude levels for 16-QAM */
 static const int32_t qam16_levels[4] = { -3, -1, +1, +3 };
 
@@ -312,6 +341,50 @@ static void precoding_free(precoding_ctx_t *c)
     free(c);
 }
 
+static int clamp_ldpc_segments(int requested)
+{
+    if (requested < 1) {
+        return 1;
+    }
+    if (requested > 8) {
+        return 8;
+    }
+    return requested;
+}
+
+static uint8_t **alloc_ldpc_segment_buffers(int n_segments, size_t segment_bytes)
+{
+    uint8_t **segments = calloc((size_t)n_segments, sizeof(*segments));
+    if (!segments) {
+        return NULL;
+    }
+
+    for (int seg = 0; seg < n_segments; seg++) {
+        segments[seg] = calloc(segment_bytes, sizeof(uint8_t));
+        if (!segments[seg]) {
+            for (int j = 0; j < seg; j++) {
+                free(segments[j]);
+            }
+            free(segments);
+            return NULL;
+        }
+    }
+
+    return segments;
+}
+
+static void free_ldpc_segment_buffers(uint8_t **segments, int n_segments)
+{
+    if (!segments) {
+        return;
+    }
+
+    for (int seg = 0; seg < n_segments; seg++) {
+        free(segments[seg]);
+    }
+    free(segments);
+}
+
 void nr_precoding()
 {
     /* Initialize the logging system first */
@@ -320,10 +393,10 @@ void nr_precoding()
     printf("=== Starting NR Precoding tests ===\n");
 
     /* Precoding parameters: configurable via environment variables */
-    const int nb_layers   = getenv_int("OAI_LAYERS", 2);        /* e.g., 2 */
-    const int nb_antennas_tx = getenv_int("OAI_NB_TX", 8);      /* TX antennas */
+    const int nb_layers   = n_layers;        /* e.g., 2 */
+    const int nb_antennas_tx = n_tx;      /* TX antennas */
     const int nb_rb       = getenv_int("OAI_RB", 52);           /* e.g., 52 for 10 MHz */
-    const int mod_order   = getenv_int("OAI_MOD_ORDER", 2);     /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+    const int mod_order   = get_central_modulation_order();      /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
     const int symbol_sz   = nb_rb * 12;                           /* REs per symbol over allocated RBs */
     const int nb_symbols  = 14;                                   /* 14 OFDM symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 5000000); /* elevated iterations */
@@ -451,7 +524,7 @@ void nr_scramble(){
     logInit();
     
     /* Requested parameters */
-    const uint32_t size   = 27456;      /* bits */
+    const uint32_t size   = coded_tb_size;      /* bits */
     const uint8_t  q      = 0;
     const uint32_t Nid    = 0;
     const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -510,7 +583,7 @@ void nr_scramble(){
 }
 
 void nr_crc(){
-    const int n_bits = 14600;
+    const int n_bits = size_tb;
     const size_t n_bytes = (size_t)n_bits / 8;
     unsigned char *crc_buf = malloc(n_bytes);
 
@@ -646,8 +719,8 @@ void nr_modulation_test()
     logInit();
     
     /* Test parameters - configurable modulation and length */
-    const uint32_t modulation_order = 2;      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
-    const uint32_t length = 27456;            /* Input bits per iteration */
+    const uint32_t modulation_order = (uint32_t)get_central_modulation_order();      /* 2=QPSK, 4=16-QAM, 6=64-QAM, 8=256-QAM */
+    const uint32_t length = coded_tb_size;            /* Input bits per iteration */
     const int num_iterations = 10000000;       /* Number of test runs */
     
     /* Map modulation order to table and name */
@@ -766,24 +839,24 @@ void nr_layermapping()
     printf("=== Starting NR Layer Mapping tests ===\n");
     
     /* Layer mapping parameters - primary parameter is n_symbs */
-    const uint32_t n_symbs = 13728;         /* Number of symbols (configurable) */
+    const uint32_t n_symbs = coded_symbols;         /* Number of symbols (configurable) */
     const int nbCodes = 1;                  /* 1 codeword */
-    const uint8_t n_layers = 2;             /* 2 layers (MIMO) */
+    const int n_layers_local = n_layers;           /* 2 layers (MIMO) */
     const int num_iterations = 10000000;     /* Number of test runs */
     
     /* Derived parameters based on n_symbs */
     const int encoded_len = n_symbs;        /* Encoded symbols length = n_symbs */
-    const int layerSz = n_symbs / n_layers; /* Layer symbol size = n_symbs / n_layers */
+    const int layerSz = n_symbs / n_layers_local; /* Layer symbol size = n_symbs / n_layers_local */
     
     printf("Parameters: n_symbs=%u, n_layers=%u, encoded_len=%d, layerSz=%d\n",
-           n_symbs, n_layers, encoded_len, layerSz);
+           n_symbs, n_layers_local, encoded_len, layerSz);
     printf("Running %d iterations...\n", num_iterations);
     
     /* Allocate modulated symbols buffer (aligned) */
     c16_t (*mod_symbs)[nbCodes][encoded_len] = aligned_alloc(64, sizeof(c16_t) * nbCodes * encoded_len);
     
     /* Allocate tx_layers output buffer (aligned) */
-    c16_t (*tx_layers)[n_layers][layerSz] = aligned_alloc(64, sizeof(c16_t) * n_layers * layerSz);
+    c16_t (*tx_layers)[n_layers_local][layerSz] = aligned_alloc(64, sizeof(c16_t) * n_layers_local * layerSz);
     
     if (!mod_symbs || !tx_layers) {
         printf("nr_layermapping: buffer allocation failed\n");
@@ -793,7 +866,7 @@ void nr_layermapping()
     }
     
     memset(mod_symbs, 0, sizeof(c16_t) * nbCodes * encoded_len);
-    memset(tx_layers, 0, sizeof(c16_t) * n_layers * layerSz);
+    memset(tx_layers, 0, sizeof(c16_t) * n_layers_local * layerSz);
     
     /* Main layer mapping loop */
     for (int iter = 0; iter < num_iterations; iter++) {
@@ -814,7 +887,7 @@ void nr_layermapping()
             nbCodes,                    /* number of codewords */
             encoded_len,                /* encoded length per codeword */
             (c16_t (*)[encoded_len])(*mod_symbs),   /* modulated symbols - cast to proper array pointer */
-            n_layers,                   /* number of layers */
+            n_layers_local,             /* number of layers */
             layerSz,                    /* layer symbol size */
             n_symbs,                    /* number of symbols */
             (c16_t (*)[layerSz])(*tx_layers)        /* output tx_layers - cast to proper array pointer */
@@ -831,7 +904,7 @@ void nr_layermapping()
     }
     
     printf("\n=== Final layer mapping output (first 8 symbols per layer) ===\n");
-    for (uint8_t layer = 0; layer < n_layers; layer++) {
+    for (uint8_t layer = 0; layer < n_layers_local; layer++) {
         printf("Layer %u:\n", layer);
         for (int i = 0; i < 8; i++) {
             printf("  symbol[%d] = (I=%6d, Q=%6d)\n", 
@@ -851,11 +924,12 @@ void nr_ldpc()
     printf("=== Starting NR LDPC Encoder tests ===\n");
     
     const int BG = 1;
-    const int Zc = 352;
+    const int Zc = lift_size;
     const int Kb = 22;
     const int K = Kb * Zc;
-    const int num_runs = 10000000;
-    const int n_segments = 1;
+    const int num_runs = getenv_int("OAI_ITERS", 10000000);
+    const int n_segments = segments;
+    const int ldpc_segments = clamp_ldpc_segments(n_segments);
 
     int nrows = (BG == 1) ? 46 : 42;
     int Nb = (BG == 1) ? 68 : 52;
@@ -875,19 +949,16 @@ void nr_ldpc()
            output_length, (Nb - 2) * Zc, output_buffer_size);
     printf("Running %d test runs...\n", num_runs);
 
-    uint8_t *input_seg = malloc((K + 7) / 8);
-    if (!input_seg) {
+    const size_t input_bytes = (size_t)((K + 7) / 8);
+    uint8_t **input = alloc_ldpc_segment_buffers(ldpc_segments, input_bytes);
+    if (!input) {
         printf("alloc failed\n");
         return;
     }
-    memset(input_seg, 0, (K + 7) / 8);
-
-    uint8_t *input[1];
-    input[0] = input_seg;
 
     uint8_t *output = malloc(output_buffer_size);
     if (!output) {
-        free(input_seg);
+        free_ldpc_segment_buffers(input, ldpc_segments);
         printf("alloc failed\n");
         return;
     }
@@ -911,12 +982,16 @@ void nr_ldpc()
 
     for (int iter = 0; iter < num_runs; iter++) {
         uint32_t pattern = (iter % 2) ? 0x55 : 0xAA;
-        for (int byte_idx = 0; byte_idx < (K + 7) / 8; byte_idx++) {
-            input_seg[byte_idx] = (uint8_t)(pattern ^ (byte_idx ^ iter));
+        for (int seg = 0; seg < ldpc_segments; seg++) {
+            for (size_t byte_idx = 0; byte_idx < input_bytes; byte_idx++) {
+                input[seg][byte_idx] = (uint8_t)(pattern ^ (byte_idx ^ iter ^ (seg * 0x11)));
+            }
         }
 
         /* Mandatory filler bits for OAI LDPC path. */
-        memset(input_seg, 0, (2 * Zc) / 8);
+        for (int seg = 0; seg < ldpc_segments; seg++) {
+            memset(input[seg], 0, (size_t)(2 * Zc) / 8);
+        }
 
         int result = LDPCencoder(input, output, &encoder_params);
 
@@ -936,7 +1011,7 @@ void nr_ldpc()
         printf("output[%02d] = %d\n", i, output[i] & 1);
     }
 
-    free(input_seg);
+    free_ldpc_segment_buffers(input, ldpc_segments);
     free(output);
     printf("=== NR LDPC Encoder tests completed ===\n");
 }
@@ -954,16 +1029,16 @@ void nr_ch_estimation()
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const double sample_rate_mhz = ((double)ofdm_symbol_size * (double)scs_khz) / 1000.0;
-    const int nb_antennas_rx = 4;           /* RX antennas */
-    const int nb_antennas_tx = 8;           /* TX antennas */
+    const int nb_antennas_rx = n_rx;           /* RX antennas */
+    const int nb_antennas_tx = n_tx;           /* TX antennas */
     const int nb_rb_pdsch = 52;            /* 106 RBs = 20 MHz */
     const int first_carrier_offset = ofdm_symbol_size - ((nb_rb_pdsch * 12) / 2);
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
     const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
-    const int snr_db = getenv_int("OAI_SNR", 0); /* SNR in dB (higher = cleaner signal) */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47); /* configurable channel taps */
+    const int snr_db = snr_db_input; /* SNR in dB (higher = cleaner signal) */
+    int channel_taps = n_taps; /* configurable channel taps */
     
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1161,7 +1236,7 @@ void nr_descrambling()
     printf("=== Starting NR DLSCH Descrambling tests ===\n");
     
         /* Descrambling parameters (mirrors nr_scramble style) */
-        const uint32_t size = 27456;        /* bits/LLRs */
+        const uint32_t size = coded_tb_size;        /* bits/LLRs */
         const uint8_t q = 0;
         const uint32_t Nid = 0;
         const uint32_t n_RNTI = 0xFFFF;    /* 65535 */
@@ -1230,9 +1305,9 @@ void nr_layer_demapping_test()
     printf("=== Starting NR Layer Demapping tests ===\n");
     
     /* Layer demapping parameters */
-    const uint8_t Nl = 2;                   /* 2 layers */
-    const uint8_t mod_order = 2;            /* 4-QAM (2 bits per symbol) */
-    const uint32_t length = 13728;           /* Total LLRs to process */
+    const uint8_t Nl = n_layers;                   /* 2 layers */
+    const uint8_t mod_order = (uint8_t)get_central_modulation_order();
+    const uint32_t length = coded_symbols;           /* Total LLRs to process */
     const int32_t codeword_TB0 = 0;         /* Codeword 0 active */
     const int32_t codeword_TB1 = -1;        /* Codeword 1 inactive */
     const int num_iterations = 10000000;
@@ -1323,7 +1398,7 @@ void nr_crc_check()
     crcTableInit();
     
     /* CRC check parameters */
-    const uint32_t payload_bits = 14600  ;     /* Payload length in bits (without CRC) */
+    const uint32_t payload_bits = size_tb  ;     /* Payload length in bits (without CRC) */
     const uint32_t total_bits = payload_bits + 24;  /* Total with CRC24 */
     const uint8_t crc_type = CRC24_A;       /* CRC24-A (default for NR) */
     const int num_iterations = 10000000;        /* 1e7 iterations */
@@ -1451,14 +1526,14 @@ void nr_soft_demod()
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
-    const int nbRx = 4;                         /* 2 RX antennas */
-    const int Nl = 2;                           /* 2 layers */
+    const int nbRx = n_rx;                         /* 2 RX antennas */
+    const int Nl = n_layers;                           /* 2 layers */
     const uint32_t len = rx_size_symbol;        /* Process full symbol */
     const unsigned char symbol = 5;             /* OFDM symbol index */
     const uint32_t llr_offset_symbol = 0;       /* LLR offset in output buffer */
     const int num_iterations = getenv_int("OAI_ITERS", 10000000); /* elevated iterations */
     const int snr_db = getenv_int("OAI_SNR", 0);                /* SNR in dB */
-    const int mod_order = getenv_int("OAI_MOD_ORDER", 2);       /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
+    const int mod_order = get_central_modulation_order();        /* 2/4/6/8 -> QPSK/16QAM/64QAM/256QAM */
     
         printf("Soft demod parameters: scs=%d kHz, rx_symbol_size=%u, CP=%d, fs=%.2f MHz, nbRx=%d, Nl=%d, len=%u\n",
             scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, nbRx, Nl, len);
@@ -1625,13 +1700,13 @@ void nr_mmse_eq()
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
-    const unsigned char n_rx = 4;               /* 4 RX antennas */
-    const unsigned char nl = 4;                 /* 4 layers (MIMO) */
+    const int n_rx_local = n_rx;                   /* 4 RX antennas (local copy for type safety) */
+    const int nl = n_layers;                       /* 4 layers (MIMO) */
     const unsigned short nb_rb = 52;           /* 52 RBs (10 MHz) */
-    const unsigned char mod_order = 2;          /* 2-QPSK */
+    const unsigned char mod_order = (unsigned char)get_central_modulation_order();
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* elevated iterations */
-    const int snr_db = getenv_int("OAI_SNR", 0);                /* SNR in dB */
-    int channel_taps = getenv_int("OAI_CHANNEL_TAPS", 47);      /* configurable channel taps */
+    const int snr_db = snr_db_input;                /* SNR in dB */
+    int channel_taps = n_taps;      /* configurable channel taps */
 
     if (channel_taps < 1) channel_taps = 1;
     if (channel_taps > 100) channel_taps = 100;
@@ -1646,14 +1721,14 @@ void nr_mmse_eq()
     const uint32_t noise_var = (uint32_t)(noise_var_f * (1u << 15)); /* scaled for fixed-point path */
     
         printf("MMSE EQ parameters: scs=%d kHz, rx_size=%u, CP=%d, fs=%.2f MHz, n_rx=%u, nl=%u, nb_rb=%u, mod_order=%u\n",
-            scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, n_rx, nl, nb_rb, mod_order);
+            scs_khz, rx_size_symbol, nb_prefix_samples, sample_rate_mhz, n_rx_local, nl, nb_rb, mod_order);
         printf("length=%d RE, SNR=%d dB, taps=%d, noise_var=%u\n", length, snr_db, channel_taps, noise_var);
         printf("Running %d iterations...\n", num_iterations);
     printf("NOTE: Using simplified MMSE wrapper (demonstrates structure)\n\n");
     
     /* Allocate rxdataF_comp buffer (compensated received symbols) */
-    int32_t (*rxdataF_comp)[n_rx][rx_size_symbol * NR_SYMBOLS_PER_SLOT] = 
-        aligned_alloc(32, sizeof(int32_t) * nl * n_rx * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
+    int32_t (*rxdataF_comp)[n_rx_local][rx_size_symbol * NR_SYMBOLS_PER_SLOT] = 
+        aligned_alloc(32, sizeof(int32_t) * nl * n_rx_local * rx_size_symbol * NR_SYMBOLS_PER_SLOT);
     if (!rxdataF_comp) {
         printf("nr_mmse_eq: rxdataF_comp allocation failed\n");
         return;
@@ -1661,7 +1736,7 @@ void nr_mmse_eq()
     
     /* Pre-fill rxdataF_comp with simulated received signal data */
     for (int layer = 0; layer < nl; layer++) {
-        for (int ant = 0; ant < n_rx; ant++) {
+        for (int ant = 0; ant < n_rx_local; ant++) {
             for (int k = 0; k < rx_size_symbol; k++) {
                 /* Create complex signal with HIGH AMPLITUDE for MMSE processing visibility
                  * Real part in lower 16 bits, imaginary in upper 16 bits 
@@ -1674,12 +1749,12 @@ void nr_mmse_eq()
     }
     
     /* Allocate channel magnitude buffers for QAM */
-    c16_t (*dl_ch_mag)[n_rx][rx_size_symbol] = 
-        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
-    c16_t (*dl_ch_magb)[n_rx][rx_size_symbol] = 
-        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
-    c16_t (*dl_ch_magr)[n_rx][rx_size_symbol] = 
-        aligned_alloc(32, sizeof(c16_t) * nl * n_rx * rx_size_symbol);
+    c16_t (*dl_ch_mag)[n_rx_local][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx_local * rx_size_symbol);
+    c16_t (*dl_ch_magb)[n_rx_local][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx_local * rx_size_symbol);
+    c16_t (*dl_ch_magr)[n_rx_local][rx_size_symbol] = 
+        aligned_alloc(32, sizeof(c16_t) * nl * n_rx_local * rx_size_symbol);
     
     if (!dl_ch_mag || !dl_ch_magb || !dl_ch_magr) {
         printf("nr_mmse_eq: channel magnitude buffer allocation failed\n");
@@ -1776,7 +1851,7 @@ void nr_mmse_eq()
     for (int iter = 0; iter < num_iterations; iter++) {
         /* Restore original signal data */
         for (int layer = 0; layer < nl; layer++) {
-            for (int ant = 0; ant < n_rx; ant++) {
+            for (int ant = 0; ant < n_rx_local; ant++) {
                 for (int k = 0; k < total_size; k++) {
                     rxdataF_comp[layer][ant][k] = original_data[layer][ant][k];
                 }
@@ -1785,7 +1860,7 @@ void nr_mmse_eq()
         
         /* Call nr_dlsch_mmse for MMSE equalization */
         nr_dlsch_mmse(rx_size_symbol,
-                      n_rx,
+                      n_rx_local,
                       nl,
                       rxdataF_comp,
                       dl_ch_mag,
@@ -1830,12 +1905,14 @@ void nr_ldpc_dec()
     
     /* LDPC decoder parameters */
     const uint8_t BG = 1;                       /* Base Graph 1 */
-    const uint16_t Z = 352;                     /* Lifting size */
+    const uint16_t Z = lift_size;                     /* Lifting size */
     const uint8_t R = 15;                       /* Decoding rate 1/3 */
     const uint8_t numMaxIter = 3;               /* Maximum iterations */
+    const int n_segments = segments;
+    const int ldpc_segments = clamp_ldpc_segments(n_segments);
     const int Kprime = 22 * Z;                  /* Information bits (K' = Kb * Z) */
     const int num_iterations = getenv_int("OAI_ITERS", 500000); /* Allow fast smoke tests */
-    const int snr_db = getenv_int("OAI_SNR", 0);             /* BPSK Eb/N0 in dB (high by default) */
+    const int snr_db = snr_db_input;             /* BPSK Eb/N0 in dB (high by default) */
     
         printf("LDPC parameters: BG=%u, Z=%u, R=%u, Kprime=%d bits\n", 
             BG, Z, R, Kprime);
@@ -1896,17 +1973,16 @@ void nr_ldpc_dec()
     /* Buffers for encoding and LLR generation */
     const int info_bytes = (Kprime + 7) / 8;
     const int code_bits = 66 * Z; /* full block length for BG1 rate-1/3 */
-    uint8_t *info_bits = aligned_alloc(32, info_bytes);
+    uint8_t **info_bits = alloc_ldpc_segment_buffers(ldpc_segments, (size_t)info_bytes);
     uint8_t *coded_bits = aligned_alloc(32, code_bits);
     if (!info_bits || !coded_bits) {
         printf("nr_ldpc_dec: Failed to allocate info/coded buffers\n");
-        free(info_bits);
+        free_ldpc_segment_buffers(info_bits, ldpc_segments);
         free(coded_bits);
         free(p_llr);
         free(p_out);
         return;
     }
-    memset(info_bits, 0, info_bytes);
     memset(coded_bits, 0, code_bits);
 
     encoder_implemparams_t encParams = {
@@ -1914,9 +1990,9 @@ void nr_ldpc_dec()
         .Kb = 22,
         .BG = BG,
         .K = Kprime,
-        .n_segments = 1,
+        .n_segments = n_segments,
         .first_seg = 0,
-        .gen_code = 0,
+        .gen_code = 1,
         .tinput = NULL,
         .tprep = NULL,
         .tparity = NULL,
@@ -1927,19 +2003,20 @@ void nr_ldpc_dec()
     int total_iterations = 0;
     for (int iter = 0; iter < num_iterations; iter++) {
         /* Generate random info bits per iteration */
-        for (int i = 0; i < info_bytes; i++) {
-            uint32_t r = xorshift32(&rng_state);
-            info_bits[i] = (uint8_t)(r & 0xFF);
-        }
-        /* Mask filler bits if Kprime not byte-aligned */
-        if ((Kprime & 7) != 0) {
-            uint8_t mask = (1u << (Kprime & 7)) - 1u;
-            info_bits[info_bytes - 1] &= mask;
+        for (int seg = 0; seg < ldpc_segments; seg++) {
+            for (int i = 0; i < info_bytes; i++) {
+                uint32_t r = xorshift32(&rng_state);
+                info_bits[seg][i] = (uint8_t)(r & 0xFF);
+            }
+            /* Mask filler bits if Kprime not byte-aligned */
+            if ((Kprime & 7) != 0) {
+                uint8_t mask = (1u << (Kprime & 7)) - 1u;
+                info_bits[seg][info_bytes - 1] &= mask;
+            }
         }
 
         /* Encode to obtain a consistent codeword for these bits */
-        uint8_t *info_ptr = info_bits;
-        int enc_ret = LDPCencoder(&info_ptr, coded_bits, &encParams);
+        int enc_ret = LDPCencoder(info_bits, coded_bits, &encParams);
         if (enc_ret != 0) {
             printf("nr_ldpc_dec: LDPCencoder failed (%d) on iter %d\n", enc_ret, iter);
             break;
@@ -1983,7 +2060,7 @@ void nr_ldpc_dec()
     
     /* Cleanup */
     free(coded_bits);
-    free(info_bits);
+    free_ldpc_segment_buffers(info_bits, ldpc_segments);
     free(p_llr);
     free(p_out);
     printf("=== NR LDPC Decoder tests completed ===\n");
@@ -2000,8 +2077,8 @@ void nr_ofdm_demo()
     const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
-    const int nb_antennas_rx = 4;           /* 4 RX antennas */
-    const int nb_antennas_tx = 8;           /* 8 TX antennas */
+    const int nb_antennas_rx = n_rx;           /* 4 RX antennas */
+    const int nb_antennas_tx = n_tx;           /* 8 TX antennas */
     const int symbols_per_slot = 14;        /* 14 symbols per slot (normal CP) */
     const int slots_per_frame = 10;         /* 10 slots per 10ms frame */
     const int samples_per_frame = (ofdm_symbol_size + nb_prefix_samples) * symbols_per_slot * slots_per_frame;

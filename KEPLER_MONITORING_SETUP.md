@@ -37,7 +37,9 @@ Criar arquivo `experimental-cluster-setup/prom-values.yaml`:
 ```yaml
 server:
   persistentVolume:
-    enabled: false
+    enabled: true
+    size: 8Gi
+  retention: 15d
 
 extraScrapeConfigs: |-
   - job_name: 'kepler'

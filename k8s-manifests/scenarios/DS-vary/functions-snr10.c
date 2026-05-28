@@ -15,16 +15,16 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-static int size_tb = 35856; /* bits */
+static int size_tb = 40976; /* bits */
 static int segments = 5;    /* LDPC segments (1 to 8) */
-static int lift_size = 352; /* Lifting size */
-static int coded_tb_size = 74880; 
+static int lift_size = 384; /* Lifting size */
+static int coded_tb_size = 82368; 
 static int g_modulation_order = 6; /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
 static int coded_symbols = 13728;
 static int n_layers = 2;
 static int n_tx = 8;
 static int n_rx = 4;
-static int n_taps = 11;
+static int n_taps = 47;
 static int snr_db_input = 10;
 
 

@@ -23,7 +23,7 @@ extraEnvVars:
 serviceMonitor:
   enabled: true
   namespace: monitoring
-  interval: 2s
+  interval: 5s
   scrapeTimeout: 2s
 
 startupProbe:

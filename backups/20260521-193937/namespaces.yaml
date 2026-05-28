@@ -1,0 +1,110 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2026-01-12T18:34:02Z"
+    labels:
+      kubernetes.io/metadata.name: default
+    name: default
+    resourceVersion: "65"
+    uid: b482654b-7966-4a5a-af7d-0182160db854
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2026-01-12T18:35:26Z"
+    labels:
+      kubernetes.io/metadata.name: kepler
+      name: kepler
+    name: kepler
+    resourceVersion: "534"
+    uid: 4dcb6da3-a3ea-4130-a714-35e89d2bbab8
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2026-01-12T18:34:02Z"
+    labels:
+      kubernetes.io/metadata.name: kube-node-lease
+    name: kube-node-lease
+    resourceVersion: "67"
+    uid: 6098ab61-ff26-4b96-9074-1e6835f643b5
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2026-01-12T18:34:02Z"
+    labels:
+      kubernetes.io/metadata.name: kube-public
+    name: kube-public
+    resourceVersion: "54"
+    uid: eafc4ee9-e4d2-4e83-a5e8-17c8187df754
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2026-01-12T18:34:02Z"
+    labels:
+      kubernetes.io/metadata.name: kube-system
+    name: kube-system
+    resourceVersion: "5"
+    uid: 00d3ca6f-250a-411d-95a4-2a1cb30e8cb9
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{},"name":"local-path-storage"}}
+    creationTimestamp: "2026-01-12T18:34:07Z"
+    labels:
+      kubernetes.io/metadata.name: local-path-storage
+    name: local-path-storage
+    resourceVersion: "278"
+    uid: 8f2325c9-7444-49eb-8a37-95cf1ad1dfc6
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{},"name":"monitoring"},"spec":{},"status":{}}
+    creationTimestamp: "2026-01-12T18:34:51Z"
+    labels:
+      kubernetes.io/metadata.name: monitoring
+    name: monitoring
+    resourceVersion: "478"
+    uid: 838098fc-43cb-43e0-8438-836b70c21883
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+kind: List
+metadata:
+  resourceVersion: ""
