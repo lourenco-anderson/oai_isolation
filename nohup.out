@@ -1,4 +1,6 @@
 nohup: ignoring input
+Processing: k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+Processing: k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
 Processing: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
 Processing: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
 Processing: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml

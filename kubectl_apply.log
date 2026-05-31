@@ -1,0 +1,668 @@
+[2026-05-28 11:34:50] [INFO] ========== SCRIPT STARTED ==========
+[2026-05-28 11:34:50] [INFO] Starting processing for: k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 11:34:50] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 11:34:51] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 11:34:51] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-28 11:34:51] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:34:51] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:34:52] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:34:52] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-28 14:34:52] [INFO] Waiting 10m before next path
+[2026-05-28 14:44:52] [INFO] Starting processing for: k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:44:52] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:44:52] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 14:44:52] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-28 14:44:52] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 17:44:52] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 17:44:54] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-28 17:44:54] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-28 17:44:54] [INFO] Waiting 10m before next path
+[2026-05-28 17:54:54] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 17:54:54] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 17:54:54] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 17:54:54] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-28 17:54:54] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 20:54:54] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 20:54:55] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 20:54:55] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-28 20:54:55] [INFO] Waiting 10m before next path
+[2026-05-28 21:04:55] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 21:04:55] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 21:04:56] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-28 21:04:56] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-28 21:04:56] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-29 00:04:56] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-29 00:04:57] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
+[2026-05-29 00:04:57] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-29 00:04:57] [INFO] Waiting 10m before next path
+[2026-05-29 00:14:57] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 00:14:57] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 00:14:58] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 00:14:58] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-29 00:14:58] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:14:58] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:14:59] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:14:59] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-29 03:14:59] [INFO] Waiting 10m before next path
+[2026-05-29 03:24:59] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:24:59] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:24:59] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 03:24:59] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-29 03:24:59] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 06:24:59] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 06:25:01] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
+[2026-05-29 06:25:01] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-29 06:25:01] [INFO] Waiting 10m before next path
+[2026-05-29 06:35:01] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 06:35:01] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 06:35:01] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 06:35:01] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-29 06:35:01] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:35:01] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:35:02] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:35:02] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-29 09:35:02] [INFO] Waiting 10m before next path
+[2026-05-29 09:45:02] [INFO] Starting processing for: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:45:02] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:45:02] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 09:45:02] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-29 09:45:02] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 12:45:02] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 12:45:04] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
+[2026-05-29 12:45:04] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-29 12:45:04] [INFO] Waiting 10m before next path
+[2026-05-29 12:55:04] [INFO] Starting processing for: k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 12:55:04] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 12:55:04] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 12:55:04] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-29 12:55:04] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 15:55:04] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 15:55:05] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 15:55:05] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-29 15:55:05] [INFO] Waiting 10m before next path
+[2026-05-29 16:05:05] [INFO] Starting processing for: k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 16:05:05] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 16:05:06] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 16:05:06] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-29 16:05:06] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 19:05:06] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 19:05:07] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-29 19:05:07] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-29 19:05:07] [INFO] Waiting 10m before next path
+[2026-05-29 19:15:07] [INFO] Starting processing for: k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 19:15:07] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 19:15:08] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 19:15:08] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-29 19:15:08] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:15:08] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:15:09] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:15:09] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-29 22:15:09] [INFO] Waiting 10m before next path
+[2026-05-29 22:25:09] [INFO] Starting processing for: k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:25:09] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:25:09] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-29 22:25:09] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-29 22:25:09] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 01:25:09] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 01:25:11] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 01:25:11] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-30 01:25:11] [INFO] Waiting 10m before next path
+[2026-05-30 01:35:11] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 01:35:11] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 01:35:11] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 01:35:11] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-30 01:35:11] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:35:11] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:35:12] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:35:12] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-30 04:35:12] [INFO] Waiting 10m before next path
+[2026-05-30 04:45:12] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:45:12] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:45:13] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 04:45:13] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-30 04:45:13] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 07:45:13] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 07:45:14] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+[2026-05-30 07:45:14] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-30 07:45:14] [INFO] Waiting 10m before next path
+[2026-05-30 07:55:14] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 07:55:14] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 07:55:15] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 07:55:15] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-30 07:55:15] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 10:55:15] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 10:55:16] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 10:55:16] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-30 10:55:16] [INFO] Waiting 10m before next path
+[2026-05-30 11:05:16] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 11:05:16] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 11:05:16] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 11:05:16] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-30 11:05:16] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 14:05:16] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 14:05:18] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
+[2026-05-30 14:05:18] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-30 14:05:18] [INFO] Waiting 10m before next path
+[2026-05-30 14:15:18] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 14:15:18] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 14:15:18] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 14:15:18] [OUTPUT] deployment.apps/gnb-crc created
+service/gnb-crc created
+deployment.apps/gnb-layer-map created
+service/gnb-layer-map created
+deployment.apps/gnb-ldpc created
+service/gnb-ldpc created
+deployment.apps/gnb-modulation created
+service/gnb-modulation created
+deployment.apps/gnb-ofdm-mod created
+service/gnb-ofdm-mod created
+deployment.apps/gnb-precoding created
+service/gnb-precoding created
+deployment.apps/gnb-scramble created
+service/gnb-scramble created
+[2026-05-30 14:15:18] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:15:18] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:15:19] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:15:19] [OUTPUT] deployment.apps "gnb-crc" deleted from default namespace
+service "gnb-crc" deleted from default namespace
+deployment.apps "gnb-layer-map" deleted from default namespace
+service "gnb-layer-map" deleted from default namespace
+deployment.apps "gnb-ldpc" deleted from default namespace
+service "gnb-ldpc" deleted from default namespace
+deployment.apps "gnb-modulation" deleted from default namespace
+service "gnb-modulation" deleted from default namespace
+deployment.apps "gnb-ofdm-mod" deleted from default namespace
+service "gnb-ofdm-mod" deleted from default namespace
+deployment.apps "gnb-precoding" deleted from default namespace
+service "gnb-precoding" deleted from default namespace
+deployment.apps "gnb-scramble" deleted from default namespace
+service "gnb-scramble" deleted from default namespace
+[2026-05-30 17:15:19] [INFO] Waiting 10m before next path
+[2026-05-30 17:25:19] [INFO] Starting processing for: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:25:19] [INFO] Running command: kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:25:20] [SUCCESS] kubectl apply -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 17:25:20] [OUTPUT] deployment.apps/ue-ch-est created
+service/ue-ch-est created
+deployment.apps/ue-ch-mmse created
+service/ue-ch-mmse created
+deployment.apps/ue-check-crc created
+service/ue-check-crc created
+deployment.apps/ue-descrambling created
+service/ue-descrambling created
+deployment.apps/ue-layer-demap created
+service/ue-layer-demap created
+deployment.apps/ue-ldpc-dec created
+service/ue-ldpc-dec created
+deployment.apps/ue-ofdm-demod created
+service/ue-ofdm-demod created
+deployment.apps/ue-soft-demod created
+service/ue-soft-demod created
+[2026-05-30 17:25:20] [INFO] Waiting 3h before deleting: k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 20:25:20] [INFO] Running command: kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 20:25:21] [SUCCESS] kubectl delete -f /home/anderson/dev/oai_isolation/k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+[2026-05-30 20:25:21] [OUTPUT] deployment.apps "ue-ch-est" deleted from default namespace
+service "ue-ch-est" deleted from default namespace
+deployment.apps "ue-ch-mmse" deleted from default namespace
+service "ue-ch-mmse" deleted from default namespace
+deployment.apps "ue-check-crc" deleted from default namespace
+service "ue-check-crc" deleted from default namespace
+deployment.apps "ue-descrambling" deleted from default namespace
+service "ue-descrambling" deleted from default namespace
+deployment.apps "ue-layer-demap" deleted from default namespace
+service "ue-layer-demap" deleted from default namespace
+deployment.apps "ue-ldpc-dec" deleted from default namespace
+service "ue-ldpc-dec" deleted from default namespace
+deployment.apps "ue-ofdm-demod" deleted from default namespace
+service "ue-ofdm-demod" deleted from default namespace
+deployment.apps "ue-soft-demod" deleted from default namespace
+service "ue-soft-demod" deleted from default namespace
+[2026-05-30 20:25:21] [INFO] Waiting 10m before next path
+[2026-05-30 20:35:21] [INFO] ========== SCRIPT FINISHED ==========
