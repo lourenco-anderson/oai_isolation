@@ -2,24 +2,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-ch-est
+  name: gnb-crc
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-ch-est
+      app: gnb-crc
   template:
     metadata:
       labels:
-        app: ue-ch-est
-        component: ue
+        app: gnb-crc
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-ch-est
-        image: ue-ch_est:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-crc
+        image: gnb-crc:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -32,11 +32,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-ch-est
+  name: gnb-crc
   namespace: default
 spec:
   selector:
-    app: ue-ch-est
+    app: gnb-crc
   ports:
   - port: 8080
     targetPort: 8080
@@ -44,24 +44,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-ch-mmse
+  name: gnb-layer-map
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-ch-mmse
+      app: gnb-layer-map
   template:
     metadata:
       labels:
-        app: ue-ch-mmse
-        component: ue
+        app: gnb-layer-map
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-ch-mmse
-        image: ue-ch_mmse:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-layer-map
+        image: gnb-layer_map:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -74,11 +74,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-ch-mmse
+  name: gnb-layer-map
   namespace: default
 spec:
   selector:
-    app: ue-ch-mmse
+    app: gnb-layer-map
   ports:
   - port: 8080
     targetPort: 8080
@@ -86,24 +86,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-check-crc
+  name: gnb-ldpc
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-check-crc
+      app: gnb-ldpc
   template:
     metadata:
       labels:
-        app: ue-check-crc
-        component: ue
+        app: gnb-ldpc
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-check-crc
-        image: ue-check_crc:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-ldpc
+        image: gnb-ldpc:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -116,11 +116,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-check-crc
+  name: gnb-ldpc
   namespace: default
 spec:
   selector:
-    app: ue-check-crc
+    app: gnb-ldpc
   ports:
   - port: 8080
     targetPort: 8080
@@ -128,24 +128,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-descrambling
+  name: gnb-modulation
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-descrambling
+      app: gnb-modulation
   template:
     metadata:
       labels:
-        app: ue-descrambling
-        component: ue
+        app: gnb-modulation
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-descrambling
-        image: ue-descrambling:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-modulation
+        image: gnb-modulation:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -158,11 +158,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-descrambling
+  name: gnb-modulation
   namespace: default
 spec:
   selector:
-    app: ue-descrambling
+    app: gnb-modulation
   ports:
   - port: 8080
     targetPort: 8080
@@ -170,24 +170,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-layer-demap
+  name: gnb-ofdm-mod
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-layer-demap
+      app: gnb-ofdm-mod
   template:
     metadata:
       labels:
-        app: ue-layer-demap
-        component: ue
+        app: gnb-ofdm-mod
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-layer-demap
-        image: ue-layer_demap:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-ofdm-mod
+        image: gnb-ofdm_mod:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -200,11 +200,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-layer-demap
+  name: gnb-ofdm-mod
   namespace: default
 spec:
   selector:
-    app: ue-layer-demap
+    app: gnb-ofdm-mod
   ports:
   - port: 8080
     targetPort: 8080
@@ -212,24 +212,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-ldpc-dec
+  name: gnb-precoding
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-ldpc-dec
+      app: gnb-precoding
   template:
     metadata:
       labels:
-        app: ue-ldpc-dec
-        component: ue
+        app: gnb-precoding
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-ldpc-dec
-        image: ue-ldpc_dec:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-precoding
+        image: gnb-precoding:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -242,11 +242,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-ldpc-dec
+  name: gnb-precoding
   namespace: default
 spec:
   selector:
-    app: ue-ldpc-dec
+    app: gnb-precoding
   ports:
   - port: 8080
     targetPort: 8080
@@ -254,24 +254,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ue-ofdm-demod
+  name: gnb-scramble
   namespace: default
 spec:
   replicas: 1
   minReadySeconds: 45
   selector:
     matchLabels:
-      app: ue-ofdm-demod
+      app: gnb-scramble
   template:
     metadata:
       labels:
-        app: ue-ofdm-demod
-        component: ue
+        app: gnb-scramble
+        component: gnb
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: ue-ofdm-demod
-        image: ue-ofdm_demod:300e-9-15khz-snr5-vDS-RMS
+      - name: gnb-scramble
+        image: gnb-scramble:300e-9-30khz-snr0-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -284,53 +284,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ue-ofdm-demod
+  name: gnb-scramble
   namespace: default
 spec:
   selector:
-    app: ue-ofdm-demod
-  ports:
-  - port: 8080
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ue-soft-demod
-  namespace: default
-spec:
-  replicas: 1
-  minReadySeconds: 45
-  selector:
-    matchLabels:
-      app: ue-soft-demod
-  template:
-    metadata:
-      labels:
-        app: ue-soft-demod
-        component: ue
-    spec:
-      terminationGracePeriodSeconds: 30
-      containers:
-      - name: ue-soft-demod
-        image: ue-soft_demod:300e-9-15khz-snr5-vDS-RMS
-        imagePullPolicy: IfNotPresent
-        resources:
-          requests:
-            cpu: 1000m
-            memory: 512Mi
-          limits:
-            cpu: 1000m
-            memory: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ue-soft-demod
-  namespace: default
-spec:
-  selector:
-    app: ue-soft-demod
+    app: gnb-scramble
   ports:
   - port: 8080
     targetPort: 8080

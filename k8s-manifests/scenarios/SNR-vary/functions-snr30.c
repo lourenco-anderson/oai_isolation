@@ -15,17 +15,17 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-static int size_tb = 40976; /* bits */
-static int segments = 5;    /* LDPC segments (1 to 8) */
+static int size_tb = 127080; /* bits */
+static int segments = 16;    /* LDPC segments (1 to 8) */
 static int lift_size = 384; /* Lifting size */
-static int coded_tb_size = 82368; 
+static int coded_tb_size = 164736; 
 static int g_modulation_order = 6; /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
-static int coded_symbols = 13728;
-static int n_layers = 2;
-static int n_tx = 2;
-static int n_rx = 2;
+static int coded_symbols = 27456;
+static int n_layers = 4;
+static int n_tx = 8;
+static int n_rx = 4;
 static int n_taps = 11;
-static int snr_db_input = 10;
+static int snr_db_input = 30;
 
 
 static int get_central_modulation_order(void)
@@ -1036,7 +1036,7 @@ void nr_ch_estimation()
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
-    const int use_real = getenv_int("OAI_USE_REAL_EST", 0); /* 1=real OAI estimation path */
+    const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = snr_db_input; /* SNR in dB (higher = cleaner signal) */
     int channel_taps = n_taps; /* configurable channel taps */
     

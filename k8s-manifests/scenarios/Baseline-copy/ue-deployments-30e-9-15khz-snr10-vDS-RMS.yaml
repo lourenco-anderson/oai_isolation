@@ -1,0 +1,1008 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-est
+  template:
+    metadata:
+      labels:
+        app: ue-ch-est
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-est
+        image: ue-ch_est:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-est
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-mmse
+  template:
+    metadata:
+      labels:
+        app: ue-ch-mmse
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-mmse
+        image: ue-ch_mmse:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-mmse
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-check-crc
+  template:
+    metadata:
+      labels:
+        app: ue-check-crc
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-check-crc
+        image: ue-check_crc:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  selector:
+    app: ue-check-crc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-descrambling
+  template:
+    metadata:
+      labels:
+        app: ue-descrambling
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-descrambling
+        image: ue-descrambling:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  selector:
+    app: ue-descrambling
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-layer-demap
+  template:
+    metadata:
+      labels:
+        app: ue-layer-demap
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-layer-demap
+        image: ue-layer_demap:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  selector:
+    app: ue-layer-demap
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ldpc-dec
+  template:
+    metadata:
+      labels:
+        app: ue-ldpc-dec
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ldpc-dec
+        image: ue-ldpc_dec:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  selector:
+    app: ue-ldpc-dec
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ofdm-demod
+  template:
+    metadata:
+      labels:
+        app: ue-ofdm-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ofdm-demod
+        image: ue-ofdm_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-ofdm-demod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-soft-demod
+  template:
+    metadata:
+      labels:
+        app: ue-soft-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-soft-demod
+        image: ue-soft_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-soft-demod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-est
+  template:
+    metadata:
+      labels:
+        app: ue-ch-est
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-est
+        image: ue-ch_est:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-est
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-mmse
+  template:
+    metadata:
+      labels:
+        app: ue-ch-mmse
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-mmse
+        image: ue-ch_mmse:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-mmse
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-check-crc
+  template:
+    metadata:
+      labels:
+        app: ue-check-crc
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-check-crc
+        image: ue-check_crc:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  selector:
+    app: ue-check-crc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-descrambling
+  template:
+    metadata:
+      labels:
+        app: ue-descrambling
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-descrambling
+        image: ue-descrambling:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  selector:
+    app: ue-descrambling
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-layer-demap
+  template:
+    metadata:
+      labels:
+        app: ue-layer-demap
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-layer-demap
+        image: ue-layer_demap:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  selector:
+    app: ue-layer-demap
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ldpc-dec
+  template:
+    metadata:
+      labels:
+        app: ue-ldpc-dec
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ldpc-dec
+        image: ue-ldpc_dec:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  selector:
+    app: ue-ldpc-dec
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ofdm-demod
+  template:
+    metadata:
+      labels:
+        app: ue-ofdm-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ofdm-demod
+        image: ue-ofdm_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-ofdm-demod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-soft-demod
+  template:
+    metadata:
+      labels:
+        app: ue-soft-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-soft-demod
+        image: ue-soft_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-soft-demod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-est
+  template:
+    metadata:
+      labels:
+        app: ue-ch-est
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-est
+        image: ue-ch_est:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-est
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-est
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ch-mmse
+  template:
+    metadata:
+      labels:
+        app: ue-ch-mmse
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ch-mmse
+        image: ue-ch_mmse:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ch-mmse
+  namespace: default
+spec:
+  selector:
+    app: ue-ch-mmse
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-check-crc
+  template:
+    metadata:
+      labels:
+        app: ue-check-crc
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-check-crc
+        image: ue-check_crc:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-check-crc
+  namespace: default
+spec:
+  selector:
+    app: ue-check-crc
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-descrambling
+  template:
+    metadata:
+      labels:
+        app: ue-descrambling
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-descrambling
+        image: ue-descrambling:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-descrambling
+  namespace: default
+spec:
+  selector:
+    app: ue-descrambling
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-layer-demap
+  template:
+    metadata:
+      labels:
+        app: ue-layer-demap
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-layer-demap
+        image: ue-layer_demap:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-layer-demap
+  namespace: default
+spec:
+  selector:
+    app: ue-layer-demap
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ldpc-dec
+  template:
+    metadata:
+      labels:
+        app: ue-ldpc-dec
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ldpc-dec
+        image: ue-ldpc_dec:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ldpc-dec
+  namespace: default
+spec:
+  selector:
+    app: ue-ldpc-dec
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-ofdm-demod
+  template:
+    metadata:
+      labels:
+        app: ue-ofdm-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-ofdm-demod
+        image: ue-ofdm_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-ofdm-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-ofdm-demod
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  replicas: 1
+  minReadySeconds: 45
+  selector:
+    matchLabels:
+      app: ue-soft-demod
+  template:
+    metadata:
+      labels:
+        app: ue-soft-demod
+        component: ue
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: ue-soft-demod
+        image: ue-soft_demod:BlkF-30e-9-15khz-snr10-vDS-RMS
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ue-soft-demod
+  namespace: default
+spec:
+  selector:
+    app: ue-soft-demod
+  ports:
+  - port: 8080
+    targetPort: 8080

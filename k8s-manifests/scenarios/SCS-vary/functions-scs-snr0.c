@@ -15,17 +15,17 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-static int size_tb = 40976; /* bits */
-static int segments = 5;    /* LDPC segments (1 to 8) */
-static int lift_size = 384; /* Lifting size */
-static int coded_tb_size = 82368; 
-static int g_modulation_order = 6; /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
+static int size_tb = 14600; /* bits */
+static int segments = 2;    /* LDPC segments (1 to 8) */
+static int lift_size = 352; /* Lifting size */
+static int coded_tb_size = 25792; 
+static int g_modulation_order = 2; /* 2=QPSK,4=16QAM,6=64QAM,8=256QAM */
 static int coded_symbols = 13728;
 static int n_layers = 2;
-static int n_tx = 2;
-static int n_rx = 2;
-static int n_taps = 11;
-static int snr_db_input = 10;
+static int n_tx = 8;
+static int n_rx = 4;
+static int n_taps = 86;
+static int snr_db_input = 0;
 
 
 static int get_central_modulation_order(void)
@@ -646,7 +646,7 @@ void nr_ofdm_modulation()
     }
 
     /* Group core parameters together */
-    const int scs_khz        = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int scs_khz        = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
     const int fftsize        = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(fftsize, scs_khz);
     const int nb_symbols     = 14;          // number of OFDM symbols
@@ -1025,7 +1025,7 @@ void nr_ch_estimation()
     printf("=== Starting NR Channel Estimation (PDSCH) tests ===\n");
     
     /* Channel estimation parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const double sample_rate_mhz = ((double)ofdm_symbol_size * (double)scs_khz) / 1000.0;
@@ -1036,7 +1036,7 @@ void nr_ch_estimation()
     const int symbols_per_slot = 14;        /* 14 symbols per slot */
     const int num_iterations = getenv_int("OAI_ITERS", 100000); /* lighter default */
     const int verbose = getenv("OAI_VERBOSE") != NULL;
-    const int use_real = getenv_int("OAI_USE_REAL_EST", 0); /* 1=real OAI estimation path */
+    const int use_real = getenv_int("OAI_USE_REAL_EST", 1); /* 1=real OAI estimation path */
     const int snr_db = snr_db_input; /* SNR in dB (higher = cleaner signal) */
     int channel_taps = n_taps; /* configurable channel taps */
     
@@ -1522,7 +1522,7 @@ void nr_soft_demod()
     printf("=== Starting NR Soft Demodulation (LLR computation) tests ===\n");
     
     /* Soft demodulation parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
@@ -1696,7 +1696,7 @@ void nr_mmse_eq()
     printf("=== Starting NR MMSE Equalization tests ===\n");
     
     /* MMSE equalization parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
     const uint32_t rx_size_symbol = (uint32_t)getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples((int)rx_size_symbol, scs_khz);
     const double sample_rate_mhz = ((double)rx_size_symbol * (double)scs_khz) / 1000.0;
@@ -2074,7 +2074,7 @@ void nr_ofdm_demo()
     printf("=== Starting NR OFDM FEP Demonstration ===\n");
     
     /* OFDM Frame Parameters */
-    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 15));
+    const int scs_khz = normalize_scs_khz(getenv_int("OAI_SCS_KHZ", 30));
     const int ofdm_symbol_size = getenv_fft_size("OAI_FFTSIZE", 1024);
     const int nb_prefix_samples = derive_cp_samples(ofdm_symbol_size, scs_khz);
     const int nb_antennas_rx = n_rx;           /* 4 RX antennas */

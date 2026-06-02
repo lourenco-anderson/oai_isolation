@@ -1,65 +1,29 @@
-# =====================================================
-# Baseline
-# =====================================================
-
-k8s-manifests/scenarios/Baseline/gnb-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
-k8s-manifests/scenarios/Baseline/ue-deployments-30e-9-15khz-snr10-vDS-RMS.yaml
-
 
 # =====================================================
-# Mod vary - QPSK
-# =====================================================
-
-k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-QPSK.yaml
-k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-QPSK.yaml
-
-# =====================================================
-# Mod vary - 16QAM
-# =====================================================
-
-k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-16QAM.yaml
-k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-16QAM.yaml
-
-# =====================================================
-# Mod vary - 64QAM
-# =====================================================
-
-k8s-manifests/scenarios/Mod-vary/gnb-deployments-30e-9-15khz-snr10-64QAM.yaml
-k8s-manifests/scenarios/Mod-vary/ue-deployments-30e-9-15khz-snr10-64QAM.yaml
-
-
-# =====================================================
-# SNR vary - 0
+# SNR vary - 20
 # ====================================================
 
-k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
-k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr0-vDS-RMS.yaml
+k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr20-vDS-RMS.yaml
+k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr20-vDS-RMS.yaml
 
 # =====================================================
-# SNR vary - 5
+# SNR vary - 30
 # ====================================================
 
-k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
-k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr5-vDS-RMS.yaml
+k8s-manifests/scenarios/SNR-vary/gnb-deployments-30e-9-15khz-snr30-vDS-RMS.yaml
+k8s-manifests/scenarios/SNR-vary/ue-deployments-30e-9-15khz-snr30-vDS-RMS.yaml
 
 # =====================================================
-# DS vary 300e-9 - snr 0
+# SCS vary 30kHz - snr 0
 # ====================================================
 
-k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
-k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr0-vDS-RMS.yaml
+k8s-manifests/scenarios/SCS-vary/gnb-deployments-300e-9-30khz-snr0-vDS-RMS.yaml
+k8s-manifests/scenarios/SCS-vary/ue-deployments-300e-9-30khz-snr0-vDS-RMS.yaml
 
 # =====================================================
-# DS vary 300e-9 - snr 5
+# SCS vary 30kHz - snr 5
 # ====================================================
 
-k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
-k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr5-vDS-RMS.yaml
-
-# =====================================================
-# DS vary 300e-9 - snr 10
-# ====================================================
-
-k8s-manifests/scenarios/DS-vary/gnb-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
-k8s-manifests/scenarios/DS-vary/ue-deployments-300e-9-15khz-snr10-vDS-RMS.yaml
+k8s-manifests/scenarios/SCS-vary/gnb-deployments-300e-9-30khz-snr5-vDS-RMS.yaml
+k8s-manifests/scenarios/SCS-vary/ue-deployments-300e-9-30khz-snr5-vDS-RMS.yaml
 

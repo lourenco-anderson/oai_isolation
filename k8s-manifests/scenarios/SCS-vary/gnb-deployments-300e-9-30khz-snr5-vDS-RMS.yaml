@@ -19,7 +19,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-crc
-        image: gnb-crc:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-crc:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -61,7 +61,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-layer-map
-        image: gnb-layer_map:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-layer_map:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -103,7 +103,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ldpc
-        image: gnb-ldpc:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-ldpc:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -145,7 +145,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-modulation
-        image: gnb-modulation:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-modulation:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -187,7 +187,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-ofdm-mod
-        image: gnb-ofdm_mod:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-ofdm_mod:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -229,7 +229,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-precoding
-        image: gnb-precoding:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-precoding:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -271,7 +271,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gnb-scramble
-        image: gnb-scramble:300e-9-15khz-snr10-vDS-RMS
+        image: gnb-scramble:300e-9-30khz-snr5-vDS-RMS
         imagePullPolicy: IfNotPresent
         resources:
           requests:
