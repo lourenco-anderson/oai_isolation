@@ -11,15 +11,13 @@ list(APPEND SOURCES "src/nr_dlsch_onelayer.c")
 # Instead, we link against the compiled OAI PHY libraries that contain it
 # list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_decoder/nrLDPC_decoder.c")
 
-# NOTE: LDPC encoder real compilation is disabled due to memory corruption issues
-# with OAI library linkage. Use mock implementation in stubs.c instead.
-# list(APPEND SOURCES "ext/openair/openair1/PHY/CODING/nrLDPC_encoder/ldpc_encoder_optim8segmulti.c")
+# NOTE: We use the standalone OAI LDPC adapter from src/ldpc_v_oai/src/oai_encoder.
 
 # Path to OAI build output
 set(OAI_BUILD_DIR "${CMAKE_SOURCE_DIR}/ext/openair/cmake_targets/ran_build/build")
 
 # Create the executable
-add_executable(oai_isolation ${SOURCES} src/stubs.c)
+add_executable(oai_isolation ${SOURCES})
 
 # Include directories
 target_include_directories(oai_isolation PUBLIC 
@@ -56,6 +54,9 @@ target_compile_definitions(oai_isolation PRIVATE
 # Enable AVX instructions to fix sse_intrin.h warnings
 target_compile_options(oai_isolation PRIVATE -mavx)
 
+# Export symbols so dynamically loaded OAI modules can resolve globals like T_cache.
+target_link_options(oai_isolation PRIVATE -rdynamic)
+
 # Add OAI build directory so static libs are found
 target_link_directories(oai_isolation PRIVATE ${OAI_BUILD_DIR})
 
@@ -64,6 +65,7 @@ target_link_libraries(oai_isolation PRIVATE
     PHY_NR_COMMON     
     PHY_COMMON         
     ${OAI_BUILD_DIR}/common/utils/nr/libnr_common.a
+    ${OAI_BUILD_DIR}/common/utils/T/libT.a
     CONFIG_LIB             
     PHY_NR             
     PHY               
@@ -74,10 +76,7 @@ target_link_libraries(oai_isolation PRIVATE
     PHY_COMMON
     UTIL
 
-    # Dynamic libs
-    nrscope
-    oai_device
-    oai_usrpdevif
+    # Dynamic libs available only in a full radio build
     params_libconfig    
     params_yaml
     rf_emulator

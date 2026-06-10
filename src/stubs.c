@@ -263,6 +263,10 @@ int is_logInit(void) {
     return log_init_done;
 }
 
+int isLogInitDone(void) {
+  return log_init_done;
+}
+
 /* Log function implementation - match OAI signature */
 int logImplement(const char *file, const char *func, int line, int comp, int level, const char *format, ...) {
     /* Silently ignore most logs to avoid noise */
@@ -298,6 +302,37 @@ int logImplement(const char *file, const char *func, int line, int comp, int lev
 /* Flush logs */
 void flush_mem_to_file(void) {
     /* No-op */
+}
+
+void logRecord_mt(const char *file,
+          const char *func,
+          int line,
+          int comp,
+          int level,
+          const char *format,
+          ...) {
+  (void)file;
+  (void)func;
+  (void)line;
+  (void)comp;
+  (void)level;
+  (void)format;
+}
+
+void vlogRecord_mt(const char *file,
+           const char *func,
+           int line,
+           int comp,
+           int level,
+           const char *format,
+           va_list args) {
+  (void)file;
+  (void)func;
+  (void)line;
+  (void)comp;
+  (void)level;
+  (void)format;
+  (void)args;
 }
 
 /* Log dump function */

@@ -3,6 +3,10 @@ image:
   tag: "v0.11.3"
   pullPolicy: IfNotPresent
 
+# NOTE: The chart's ClusterRole (v0.11.x) only grants access to pods/nodes.
+# The kubeletPodInformer also requires nodes/proxy, nodes/metrics, nodes/stats.
+# Apply the RBAC patch after helm install (see install script).
+
 extraEnvVars:
   KEPLER_LOG_LEVEL: "5"
   ENABLE_GPU: "false"
